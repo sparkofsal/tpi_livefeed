@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TPI Live Communication Board</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="header">
+    <img src="TPILOGOWHITE.png" alt="TPI Logo" class="logo" />
+
+    <div class="header-text">
+      <h1>Live Communication Board</h1>
+      <div id="datetime"></div>
+
+      <div class="header-actions">
+        <a id="btn-live-notes" class="btn" target="_blank" rel="noopener">Submit Live Note</a>
+        <a id="btn-new-parts" class="btn" target="_blank" rel="noopener">Submit New Part / Project</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- STACKED LAYOUT -->
+  <div class="stack">
+
+    <!-- TOP: ACTION ITEMS -->
+    <section class="panel">
+      <div class="panel-title">
+        <h2>New Parts & Projects (Engineering/Programming)</h2>
+        <div id="action-count" class="panel-sub">—</div>
+      </div>
+
+      <div class="table-container no-scrollbar action-height" id="action-container">
+        <table>
+          <thead>
+            <tr id="action-headers"></tr>
+          </thead>
+          <tbody id="action-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- BOTTOM: LIVE NOTES -->
+    <section class="panel">
+      <div class="panel-title">
+        <h2>Live Notes (Action Items)</h2>
+        <div id="feed-count" class="panel-sub">—</div>
+      </div>
+
+      <div class="table-container no-scrollbar feed-height" id="feed-container">
+        <table>
+          <thead>
+            <tr id="feed-headers"></tr>
+          </thead>
+          <tbody id="feed-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
