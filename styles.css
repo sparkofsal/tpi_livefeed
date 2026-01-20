@@ -7,13 +7,13 @@ body {
   margin: 0;
   padding: 2rem;
 
-  /* Center the whole board so it doesn't hug the edges */
+  /* center the board */
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* Keep content from going ultra-wide on big screens */
+/* keep from being ultra-wide */
 .header, .stack {
   width: 100%;
   max-width: 1400px;
@@ -36,7 +36,7 @@ body {
   margin-top: 4px;
 }
 
-/* Form buttons */
+/* buttons (open forms) */
 .header-actions {
   display: flex;
   gap: 10px;
@@ -82,17 +82,15 @@ body {
 .panel-sub { color: #bbb; }
 
 /* ===== TABLE ===== */
-.table-container {
-  overflow-y: auto;
-}
+.table-container { overflow-y: auto; }
 
-.action-height { max-height: 52vh; } /* top panel bigger */
-.feed-height   { max-height: 32vh; } /* bottom panel smaller */
+.action-height { max-height: 52vh; }
+.feed-height   { max-height: 32vh; }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: fixed; /* stable column widths */
 }
 
 th, td {
@@ -100,16 +98,17 @@ th, td {
   padding: 10px;
   text-align: left;
 
-  /* bigger + responsive = easier on TVs */
+  /* responsive font for TV + desktop */
   font-size: clamp(0.9rem, 1.25vw, 1.15rem);
 
-  /* text wrapping so nothing spills */
+  /* wrap long text */
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
   vertical-align: top;
 }
 
+/* sticky header */
 thead tr {
   position: sticky;
   top: 0;
@@ -117,41 +116,41 @@ thead tr {
   z-index: 1;
 }
 
-/* Hide scrollbars for TV display */
+/* hide scrollbars for TV display */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
-/* Emphasis */
+/* emphasis */
 tr.row-hot td { font-weight: 800; }
 tr.row-sample td { outline: 2px solid #555; }
 tr.row-hold td { opacity: 0.85; }
 
-/* Mobile: allow horizontal scroll inside each table container */
+/* NEEDED BY urgency colors (CELL ONLY) */
+td.needed-yellow {
+  background: #b38f00;
+  color: #111;
+  font-weight: 800;
+}
+
+td.needed-red {
+  background: #b30000;
+  color: #fff;
+  font-weight: 900;
+}
+
+/* ===== MOBILE (optional but nice) ===== */
 @media (max-width: 700px) {
   body { padding: 1rem; }
-
   .logo { height: 60px; }
-
   .btn { width: 100%; text-align: center; }
 
-  /* Each table container can scroll sideways on small screens */
+  /* allow horizontal swipe inside table on phones */
   .table-container {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+  table { min-width: 950px; }
 
-  /* Let table be wider than the phone so it can scroll horizontally */
-  table {
-    min-width: 900px;
-  }
-
-  /* Slightly smaller font so more fits */
-  th, td {
-    font-size: 0.9rem;
-    padding: 8px;
-  }
-
-  /* Reduce max heights a bit so you can see both sections */
   .action-height { max-height: 45vh; }
-  .feed-height { max-height: 30vh; }
+  .feed-height   { max-height: 30vh; }
 }
