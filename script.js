@@ -23,9 +23,10 @@
  **************************************************/
 
 // ===== Spreadsheet + GIDs =====
-const sheetID = '1W2Fc0P8Ye9ICLPhbtEIM35n3g_3swuE9HZZ1YU_NqPA';
-const GID_LIVE_NOTES = '1591460905';
-const GID_NEW_PARTS  = '1564470138';
+const sheetID = '1UFkn-d_t3DTt1RCHqp4K3HOuTMyrEVBmZnj1in1PoHc';
+const GID_LIVE_NOTES = '863386477';
+const GID_NEW_PARTS  = '2113651494';
+
 
 // ===== Form URLs (buttons open these) =====
 const FORM_URL_LIVE_NOTES =
