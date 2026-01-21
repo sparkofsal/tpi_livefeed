@@ -26,10 +26,33 @@
   <div class="stack">
 
     <!-- TOP: ACTION ITEMS -->
-    <section class="panel">
+    <section class="panel" id="panel-action">
       <div class="panel-title">
-        <h2>New Parts & Projects (Action Items)</h2>
-        <div id="action-count" class="panel-sub">—</div>
+        <div class="panel-title-left">
+          <h2>New Parts & Projects (Pending)</h2>
+          <div id="action-count" class="panel-sub">—</div>
+        </div>
+
+        <!-- Legend (squares) in the header empty space -->
+        <div class="legend-inline" aria-label="Needed by color key">
+          <span class="legend-chip">
+            <span class="legend-swatch needed-red"></span>
+            ≤ 7 days / overdue
+          </span>
+          <span class="legend-chip">
+            <span class="legend-swatch needed-yellow"></span>
+            ≤ 10 days
+          </span>
+          <span class="legend-chip">
+            <span class="legend-swatch needed-clear"></span>
+            &gt; 10 days
+          </span>
+        </div>
+
+        <!-- Maximize toggle (same size as .btn links) -->
+        <button class="btn btn-max" id="btn-max-action" type="button" aria-label="Maximize Action Items">
+          ⤢ Maximize
+        </button>
       </div>
 
       <div class="table-container no-scrollbar action-height" id="action-container">
@@ -43,10 +66,32 @@
     </section>
 
     <!-- BOTTOM: LIVE NOTES -->
-    <section class="panel">
+    <section class="panel" id="panel-feed">
       <div class="panel-title">
-        <h2>Live Notes (Scrolling Feed)</h2>
-        <div id="feed-count" class="panel-sub">—</div>
+        <div class="panel-title-left">
+          <h2>Live Notes (Scrolling Feed)</h2>
+          <div id="feed-count" class="panel-sub">—</div>
+        </div>
+
+        <!-- Legend (same as top) -->
+        <div class="legend-inline" aria-label="Needed by color key">
+          <span class="legend-chip">
+            <span class="legend-swatch needed-red"></span>
+            ≤ 7 days / overdue
+          </span>
+          <span class="legend-chip">
+            <span class="legend-swatch needed-yellow"></span>
+            ≤ 10 days
+          </span>
+          <span class="legend-chip">
+            <span class="legend-swatch needed-clear"></span>
+            &gt; 10 days
+          </span>
+        </div>
+
+        <button class="btn btn-max" id="btn-max-feed" type="button" aria-label="Maximize Live Notes">
+          ⤢ Maximize
+        </button>
       </div>
 
       <div class="table-container no-scrollbar feed-height" id="feed-container">

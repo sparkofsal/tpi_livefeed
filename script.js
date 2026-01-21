@@ -1,32 +1,27 @@
 /**************************************************
  * TPI Live Communication Board (STACKED)
- * Top: New Parts & Projects (Action Items)
- * Bottom: Live Notes (Auto-scroll)
  *
- * Columns (both):
- * A Timestamp (auto)
- * ...
- * NEEDED BY + STATUS exist on both
+ * VISUAL / RULES:
+ * - NEEDED BY cell only:
+ *   - RED    = overdue OR due within 7 days
+ *   - YELLOW = due within 10 days (but > 7)
+ *   - CLEAR  = due > 10 days (no highlight)
  *
- * STATUS values: OPEN / HOLD / DONE
- * - DONE is hidden on both
+ * DISPLAY:
+ * - NEEDED BY shows DATE ONLY (no time ever)
+ * - Timestamp shows date/time
  *
- * SORTING:
- * - Live Notes: newest Timestamp first (true feed)
- * - New Parts: OPEN before HOLD → earliest NEEDED BY → oldest Timestamp
- *
- * VISUAL:
- * - NEEDED BY cell:
- *     RED if due today or overdue
- *     YELLOW if due within 11 days
- * - SAMPLES = YES highlighted (New Parts only)
+ * UX:
+ * - Maximize button toggles either panel full view
+ * - Auto-scroll:
+ *   - Live Notes ALWAYS auto-scrolls (unless user hovers it)
+ *   - When Action Items is maximized, Action Items will auto-scroll too
  **************************************************/
 
 // ===== Spreadsheet + GIDs =====
 const sheetID = '1UFkn-d_t3DTt1RCHqp4K3HOuTMyrEVBmZnj1in1PoHc';
 const GID_LIVE_NOTES = '863386477';
 const GID_NEW_PARTS  = '2113651494';
-
 
 // ===== Form URLs (buttons open these) =====
 const FORM_URL_LIVE_NOTES =
@@ -39,21 +34,21 @@ const FORM_URL_NEW_PARTS =
 const REFRESH_MS = 15 * 1000;
 const CLOCK_MS = 1000;
 
-// ===== Auto-scroll (Live Notes only) =====
+// ===== Auto-scroll =====
 const SCROLL_SPEED = 0.35;
 const SCROLL_TICK = 25;
 
-// ===== Needed-by warning window =====
-const YELLOW_WINDOW_DAYS = 11; // ~week and a half
+// ===== Needed-by warning windows =====
+const RED_WINDOW_DAYS = 7;
+const YELLOW_WINDOW_DAYS = 10;
 
 // ===== Column header names =====
 const COL_STATUS    = 'STATUS';
 const COL_SAMPLES   = 'SAMPLES';
-const COL_PRIORITY  = 'PRIORITY';   // Live Notes only
+const COL_PRIORITY  = 'PRIORITY';
 const COL_NEEDED_BY = 'NEEDED BY';
 
 // ===== Visible columns by index =====
-// Both tabs are 9 columns: Timestamp + 8 questions
 const COLS_LIVE_NOTES = [0,1,2,3,4,5,6,7,8];
 const COLS_NEW_PARTS  = [0,1,2,3,4,5,6,7,8];
 
@@ -64,7 +59,9 @@ const feedHeaders = document.getElementById('feed-headers');
 const feedBody = document.getElementById('feed-body');
 const actionCount = document.getElementById('action-count');
 const feedCount = document.getElementById('feed-count');
+
 const feedContainer = document.getElementById('feed-container');
+const actionContainer = document.getElementById('action-container');
 
 // Wire form buttons
 document.getElementById('btn-live-notes').href = FORM_URL_LIVE_NOTES;
@@ -82,11 +79,11 @@ function statusRank(v) {
   return 5;
 }
 
-// Parses "NEEDED BY" to a comparable timestamp (ms)
-// - gviz date format: Date(YYYY,MM,DD,hh,mm,ss)
-// - other parseable strings like 1/20/2026
-// - if empty/invalid: Infinity (sorts last)
-function parseNeededByMs(v) {
+/**
+ * Parse Google gviz date formats + regular strings into ms.
+ * Returns Infinity when invalid/empty (so sorting pushes to bottom).
+ */
+function parseAnyDateMs(v) {
   if (!v) return Infinity;
 
   if (typeof v === 'string' && v.startsWith('Date(')) {
@@ -107,21 +104,28 @@ function parseNeededByMs(v) {
   return Number.isFinite(ms) ? ms : Infinity;
 }
 
-// Formats Timestamp / Needed By for display
-function formatAnyDate(v) {
+/**
+ * Display ONLY date (no time) for NEEDED BY.
+ * This forces date-only even if the input includes "12:00:00 AM".
+ */
+function formatDateOnly(v) {
+  const ms = parseAnyDateMs(v);
+  if (!Number.isFinite(ms) || ms === Infinity) return '';
+  return new Date(ms).toLocaleDateString();
+}
+
+/**
+ * Display Timestamp etc. (date/time when present)
+ */
+function formatTimestamp(v) {
   if (!v) return '';
-
-  if (typeof v === 'number') {
-    const base = new Date(1899, 11, 30);
-    return new Date(base.getTime() + v * 86400000).toLocaleDateString();
-  }
-
   if (typeof v === 'string' && v.startsWith('Date(')) {
     const nums = v.match(/\d+/g)?.map(Number) || [];
     const [y, m, d, hh=0, mm=0, ss=0] = nums;
     return new Date(y, m, d, hh, mm, ss).toLocaleString();
   }
-
+  const dt = new Date(String(v));
+  if (Number.isFinite(dt.getTime())) return dt.toLocaleString();
   return String(v);
 }
 
@@ -155,23 +159,25 @@ function buildHeader(cols, visibleCols) {
   return visibleCols.map(i => `<th>${cols[i]?.label ?? ''}</th>`).join('');
 }
 
-// Builds a row and applies the "NEEDED BY" cell colors
+/**
+ * Build a row and apply:
+ * - HOLD dimming / HOT bold / SAMPLES highlight
+ * - NEEDED BY cell color rules
+ * - NEEDED BY display date-only
+ */
 function buildRow(row, cols, visibleCols, opts = {}) {
   const tr = document.createElement('tr');
 
-  // HOT emphasis (Live Notes only)
   if (opts.priorityIdx !== undefined) {
     const p = normalize(cellVal(row.c[opts.priorityIdx]));
     if (p === 'HOT') tr.classList.add('row-hot');
   }
 
-  // Highlight samples needed (New Parts only)
   if (opts.samplesIdx !== undefined) {
     const s = normalize(cellVal(row.c[opts.samplesIdx]));
     if (s === 'YES') tr.classList.add('row-sample');
   }
 
-  // HOLD dimming
   if (opts.statusIdx !== undefined) {
     const st = normalize(cellVal(row.c[opts.statusIdx]));
     if (st === 'HOLD') tr.classList.add('row-hold');
@@ -187,23 +193,25 @@ function buildRow(row, cols, visibleCols, opts = {}) {
     const header = normalize(cols[i]?.label);
     const v = cellVal(row.c[i]);
 
-    const isDateField =
-      header.includes('TIME') ||
-      header.includes('DATE') ||
-      header.includes('NEEDED BY');
-
-    td.textContent = isDateField ? formatAnyDate(v) : v;
+    // Display rules:
+    if (header === 'NEEDED BY') {
+      td.textContent = formatDateOnly(v); // FORCE DATE ONLY
+    } else if (header.includes('TIME') || header.includes('DATE')) {
+      td.textContent = formatTimestamp(v);
+    } else {
+      td.textContent = v;
+    }
 
     // Color ONLY the NEEDED BY cell
     if (opts.neededByIdx !== undefined && i === opts.neededByIdx) {
-      const dueMs = parseNeededByMs(v);
+      const dueMs = parseAnyDateMs(v);
       if (Number.isFinite(dueMs) && dueMs !== Infinity) {
         const daysAway = Math.floor((dueMs - todayMs) / 86400000);
 
-        if (daysAway <= 0) {
-          td.classList.add('needed-red'); // today or overdue
+        if (daysAway <= RED_WINDOW_DAYS) {
+          td.classList.add('needed-red');
         } else if (daysAway <= YELLOW_WINDOW_DAYS) {
-          td.classList.add('needed-yellow'); // within 11 days
+          td.classList.add('needed-yellow');
         }
       }
     }
@@ -218,6 +226,45 @@ function updateClock() {
   document.getElementById('datetime').textContent = new Date().toLocaleString();
 }
 
+/* =========================
+   MAXIMIZE / RESTORE
+   ========================= */
+function setMaxMode(mode) {
+  document.body.classList.remove('max-action', 'max-feed');
+  if (mode === 'action') document.body.classList.add('max-action');
+  if (mode === 'feed') document.body.classList.add('max-feed');
+
+  // Update button text
+  const btnA = document.getElementById('btn-max-action');
+  const btnF = document.getElementById('btn-max-feed');
+  if (btnA) btnA.textContent = document.body.classList.contains('max-action') ? '⤡ Restore' : '⤢ Maximize';
+  if (btnF) btnF.textContent = document.body.classList.contains('max-feed') ? '⤡ Restore' : '⤢ Maximize';
+
+  // Convenience: when maximizing either panel, make sure its auto-scroll is active
+  if (mode === 'feed') {
+    pauseScrollFeed = false;
+    // optional: restart from top when maximizing
+    // feedContainer.scrollTop = 0;
+  }
+  if (mode === 'action') {
+    pauseScrollAction = false;
+    // optional: restart from top when maximizing
+    // actionContainer.scrollTop = 0;
+  }
+}
+
+document.getElementById('btn-max-action')?.addEventListener('click', () => {
+  setMaxMode(document.body.classList.contains('max-action') ? null : 'action');
+});
+
+document.getElementById('btn-max-feed')?.addEventListener('click', () => {
+  setMaxMode(document.body.classList.contains('max-feed') ? null : 'feed');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') setMaxMode(null);
+});
+
 // ===== MAIN LOAD =====
 async function loadBoard() {
   try {
@@ -226,9 +273,7 @@ async function loadBoard() {
       fetchGvizTable(GID_NEW_PARTS),
     ]);
 
-    /* =========================
-       LIVE NOTES (BOTTOM FEED)
-       ========================= */
+    /* ===== LIVE NOTES ===== */
     const liveCols = live.cols || [];
     const liveRowsAll = (live.rows || []).slice();
     const liveMap = buildColIndexMap(liveCols);
@@ -236,18 +281,17 @@ async function loadBoard() {
     feedHeaders.innerHTML = buildHeader(liveCols, COLS_LIVE_NOTES);
     feedBody.innerHTML = '';
 
-    const liveStatusIdx  = liveMap[normalize(COL_STATUS)];
+    const liveStatusIdx   = liveMap[normalize(COL_STATUS)];
     const livePriorityIdx = liveMap[normalize(COL_PRIORITY)];
-    const liveNeededIdx  = liveMap[normalize(COL_NEEDED_BY)];
+    const liveNeededIdx   = liveMap[normalize(COL_NEEDED_BY)];
 
-    // Newest first by Timestamp (col 0)
+    // Newest first by Timestamp col 0
     liveRowsAll.sort((a, b) => {
-      const ta = a.c?.[0]?.v ? new Date(a.c[0].v).getTime() : 0;
-      const tb = b.c?.[0]?.v ? new Date(b.c[0].v).getTime() : 0;
+      const ta = a.c?.[0]?.v ? parseAnyDateMs(a.c[0].v) : 0;
+      const tb = b.c?.[0]?.v ? parseAnyDateMs(b.c[0].v) : 0;
       return tb - ta;
     });
 
-    // Hide DONE
     const liveRows = liveRowsAll.filter(r => {
       if (liveStatusIdx === undefined) return true;
       return normalize(cellVal(r.c[liveStatusIdx])) !== 'DONE';
@@ -263,9 +307,7 @@ async function loadBoard() {
 
     feedCount.textContent = `${liveRows.length} notes`;
 
-    /* =========================
-       NEW PARTS & PROJECTS (TOP)
-       ========================= */
+    /* ===== NEW PARTS ===== */
     const partCols = parts.cols || [];
     const partRowsAll = (parts.rows || []).slice();
     const partMap = buildColIndexMap(partCols);
@@ -277,7 +319,6 @@ async function loadBoard() {
     const partSamplesIdx = partMap[normalize(COL_SAMPLES)];
     const partNeededIdx  = partMap[normalize(COL_NEEDED_BY)];
 
-    // Hide DONE
     const partRows = partRowsAll.filter(r => {
       if (partStatusIdx === undefined) return true;
       return normalize(cellVal(r.c[partStatusIdx])) !== 'DONE';
@@ -289,12 +330,12 @@ async function loadBoard() {
       const sb = partStatusIdx !== undefined ? statusRank(cellVal(b.c[partStatusIdx])) : 5;
       if (sa !== sb) return sa - sb;
 
-      const na = partNeededIdx !== undefined ? parseNeededByMs(cellVal(a.c[partNeededIdx])) : Infinity;
-      const nb = partNeededIdx !== undefined ? parseNeededByMs(cellVal(b.c[partNeededIdx])) : Infinity;
+      const na = partNeededIdx !== undefined ? parseAnyDateMs(cellVal(a.c[partNeededIdx])) : Infinity;
+      const nb = partNeededIdx !== undefined ? parseAnyDateMs(cellVal(b.c[partNeededIdx])) : Infinity;
       if (na !== nb) return na - nb;
 
-      const ta = a.c?.[0]?.v ? new Date(a.c[0].v).getTime() : 0;
-      const tb = b.c?.[0]?.v ? new Date(b.c[0].v).getTime() : 0;
+      const ta = a.c?.[0]?.v ? parseAnyDateMs(a.c[0].v) : 0;
+      const tb = b.c?.[0]?.v ? parseAnyDateMs(b.c[0].v) : 0;
       return ta - tb;
     });
 
@@ -318,13 +359,25 @@ async function loadBoard() {
   }
 }
 
-// ===== Auto-scroll (Live Notes only) =====
-let pauseScroll = false;
-feedContainer.addEventListener('mouseenter', () => pauseScroll = true);
-feedContainer.addEventListener('mouseleave', () => pauseScroll = false);
+/* =========================
+   AUTO-SCROLL
+   =========================
+   - Feed: always auto-scrolls unless user hovers it
+   - Action: auto-scrolls ONLY when maximized (unless user hovers it)
+*/
+let pauseScrollFeed = false;
+let pauseScrollAction = false;
 
+feedContainer.addEventListener('mouseenter', () => pauseScrollFeed = true);
+feedContainer.addEventListener('mouseleave', () => pauseScrollFeed = false);
+
+actionContainer.addEventListener('mouseenter', () => pauseScrollAction = true);
+actionContainer.addEventListener('mouseleave', () => pauseScrollAction = false);
+
+// Live Notes auto-scroll (always)
 setInterval(() => {
-  if (pauseScroll) return;
+  if (pauseScrollFeed) return;
+
   const max = feedContainer.scrollHeight - feedContainer.clientHeight;
   if (max <= 0) return;
 
@@ -332,8 +385,21 @@ setInterval(() => {
   if (feedContainer.scrollTop >= max) feedContainer.scrollTop = 0;
 }, SCROLL_TICK);
 
+// Action Items auto-scroll (only when maximized)
+setInterval(() => {
+  if (!document.body.classList.contains('max-action')) return;
+  if (pauseScrollAction) return;
+
+  const max = actionContainer.scrollHeight - actionContainer.clientHeight;
+  if (max <= 0) return;
+
+  actionContainer.scrollTop += SCROLL_SPEED;
+  if (actionContainer.scrollTop >= max) actionContainer.scrollTop = 0;
+}, SCROLL_TICK);
+
 // ===== BOOT =====
 loadBoard();
 updateClock();
 setInterval(loadBoard, REFRESH_MS);
 setInterval(updateClock, CLOCK_MS);
+setMaxMode(null);

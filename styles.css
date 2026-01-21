@@ -7,7 +7,6 @@ body {
   margin: 0;
   padding: 2rem;
 
-  /* center the board */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -28,7 +27,6 @@ body {
 }
 
 .logo { height: 80px; }
-
 .header-text h1 { margin: 0; }
 
 #datetime {
@@ -36,7 +34,7 @@ body {
   margin-top: 4px;
 }
 
-/* buttons (open forms) */
+/* buttons */
 .header-actions {
   display: flex;
   gap: 10px;
@@ -52,9 +50,12 @@ body {
   color: #fff;
   text-decoration: none;
   font-size: 0.95rem;
+  cursor: pointer;
 }
 
 .btn:hover { opacity: 0.85; }
+
+.btn-max { white-space: nowrap; }
 
 /* ===== STACKED PANELS ===== */
 .stack {
@@ -71,15 +72,55 @@ body {
   overflow: hidden;
 }
 
+/* Make room for legend in the header line */
 .panel-title {
   padding: 12px;
   background: #151517;
-  display: flex;
-  justify-content: space-between;
   border-bottom: 1px solid #333;
+
+  display: grid;
+  grid-template-columns: 1fr auto auto; /* left text | legend | button */
+  gap: 12px;
+  align-items: center;
 }
 
+.panel-title-left h2 { margin: 0; }
 .panel-sub { color: #bbb; }
+
+/* ===== LEGEND (INLINE SQUARES) ===== */
+.legend-inline{
+  display:flex;
+  flex-wrap:wrap;
+  gap:14px;
+  align-items:center;
+  justify-content:center;
+  padding: 6px 10px;
+  border: 1px solid #2d2d2d;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.18);
+}
+
+.legend-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size: 0.9rem;
+  color:#ddd;
+  white-space: nowrap;
+}
+
+.legend-swatch{
+  width:14px;
+  height:14px;
+  border-radius:4px;
+  display:inline-block;
+  border:1px solid rgba(0,0,0,0.35);
+}
+
+/* squares colors */
+.legend-swatch.needed-red { background:#b30000; }
+.legend-swatch.needed-yellow { background:#b38f00; }
+.legend-swatch.needed-clear { background: transparent; border:1px solid #777; }
 
 /* ===== TABLE ===== */
 .table-container { overflow-y: auto; }
@@ -90,25 +131,21 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed; /* stable column widths */
+  table-layout: fixed;
 }
 
 th, td {
   border: 1px solid #333;
   padding: 10px;
   text-align: left;
-
-  /* responsive font for TV + desktop */
   font-size: clamp(0.9rem, 1.25vw, 1.15rem);
 
-  /* wrap long text */
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
   vertical-align: top;
 }
 
-/* sticky header */
 thead tr {
   position: sticky;
   top: 0;
@@ -116,7 +153,7 @@ thead tr {
   z-index: 1;
 }
 
-/* hide scrollbars for TV display */
+/* hide scrollbars */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
@@ -138,13 +175,21 @@ td.needed-red {
   font-weight: 900;
 }
 
-/* ===== MOBILE (optional but nice) ===== */
+/* =========================
+   MAXIMIZE MODE
+   ========================= */
+body.max-action #panel-feed { display: none; }
+body.max-feed   #panel-action { display: none; }
+
+body.max-action .action-height { max-height: 78vh; }
+body.max-feed   .feed-height   { max-height: 78vh; }
+
+/* ===== MOBILE ===== */
 @media (max-width: 700px) {
   body { padding: 1rem; }
   .logo { height: 60px; }
   .btn { width: 100%; text-align: center; }
 
-  /* allow horizontal swipe inside table on phones */
   .table-container {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -153,4 +198,15 @@ td.needed-red {
 
   .action-height { max-height: 45vh; }
   .feed-height   { max-height: 30vh; }
+
+  body.max-action .action-height { max-height: 75vh; }
+  body.max-feed   .feed-height   { max-height: 75vh; }
+
+  .panel-title{
+    grid-template-columns: 1fr; /* stack on mobile */
+    gap: 10px;
+  }
+  .legend-inline{
+    justify-content:flex-start;
+  }
 }
