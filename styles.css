@@ -13,7 +13,7 @@ body {
 }
 
 /* keep from being ultra-wide */
-.header, .stack {
+.header, .app {
   width: 100%;
   max-width: 1400px;
 }
@@ -34,7 +34,7 @@ body {
   margin-top: 4px;
 }
 
-/* buttons */
+/* buttons (open forms) */
 .header-actions {
   display: flex;
   gap: 10px;
@@ -52,19 +52,36 @@ body {
   font-size: 0.95rem;
   cursor: pointer;
 }
-
 .btn:hover { opacity: 0.85; }
 
-.btn-max { white-space: nowrap; }
+/* ===== VIEWS ===== */
+.view { display: none; }
+.view.active { display: block; }
 
-/* ===== STACKED PANELS ===== */
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+/* ===== HOME MENU ===== */
+.home-card{
+  border: 2px solid #444;
+  border-radius: 12px;
+  background: #0f0f10;
+  padding: 18px;
+}
+.home-title{ margin: 0 0 6px 0; }
+.home-sub{ margin: 0 0 16px 0; color:#bbb; }
+
+.home-buttons{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
 }
 
-/* ===== PANELS ===== */
+.btn-big{
+  padding: 16px 18px;
+  font-size: 1.05rem;
+  border-radius: 12px;
+  min-width: 260px;
+}
+
+/* ===== PANEL ===== */
 .panel {
   border: 2px solid #444;
   border-radius: 10px;
@@ -72,20 +89,27 @@ body {
   overflow: hidden;
 }
 
-/* Make room for legend in the header line */
 .panel-title {
   padding: 12px;
   background: #151517;
   border-bottom: 1px solid #333;
+}
 
-  display: grid;
-  grid-template-columns: 1fr auto auto; /* left text | legend | button */
+.panel-title-grid{
+  display:grid;
+  grid-template-columns: 1fr auto auto; /* title | legend | actions */
   gap: 12px;
-  align-items: center;
+  align-items:center;
 }
 
 .panel-title-left h2 { margin: 0; }
 .panel-sub { color: #bbb; }
+
+.panel-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+}
 
 /* ===== LEGEND (INLINE SQUARES) ===== */
 .legend-inline{
@@ -117,16 +141,15 @@ body {
   border:1px solid rgba(0,0,0,0.35);
 }
 
-/* squares colors */
 .legend-swatch.needed-red { background:#b30000; }
 .legend-swatch.needed-yellow { background:#b38f00; }
 .legend-swatch.needed-clear { background: transparent; border:1px solid #777; }
 
 /* ===== TABLE ===== */
 .table-container { overflow-y: auto; }
-
-.action-height { max-height: 52vh; }
-.feed-height   { max-height: 32vh; }
+.action-height { max-height: 78vh; }
+.feed-height   { max-height: 78vh; }
+.ship-height   { max-height: 78vh; }
 
 table {
   width: 100%;
@@ -139,7 +162,6 @@ th, td {
   padding: 10px;
   text-align: left;
   font-size: clamp(0.9rem, 1.25vw, 1.15rem);
-
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -153,7 +175,6 @@ thead tr {
   z-index: 1;
 }
 
-/* hide scrollbars */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
@@ -168,45 +189,41 @@ td.needed-yellow {
   color: #111;
   font-weight: 800;
 }
-
 td.needed-red {
   background: #b30000;
   color: #fff;
   font-weight: 900;
 }
 
-/* =========================
-   MAXIMIZE MODE
-   ========================= */
-body.max-action #panel-feed { display: none; }
-body.max-feed   #panel-action { display: none; }
+/* ===== SHIPPING (optional module) ===== */
+.shipping-title-grid{
+  grid-template-columns: 1fr auto auto;
+}
 
-body.max-action .action-height { max-height: 78vh; }
-body.max-feed   .feed-height   { max-height: 78vh; }
+.shipping-note{
+  color:#bbb;
+  font-size: 0.95rem;
+  padding: 6px 10px;
+  border: 1px solid #2d2d2d;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.18);
+  white-space: nowrap;
+}
 
 /* ===== MOBILE ===== */
 @media (max-width: 700px) {
   body { padding: 1rem; }
   .logo { height: 60px; }
   .btn { width: 100%; text-align: center; }
+  .btn-big{ min-width: 100%; }
 
-  .table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+  .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { min-width: 950px; }
 
-  .action-height { max-height: 45vh; }
-  .feed-height   { max-height: 30vh; }
-
-  body.max-action .action-height { max-height: 75vh; }
-  body.max-feed   .feed-height   { max-height: 75vh; }
-
-  .panel-title{
-    grid-template-columns: 1fr; /* stack on mobile */
+  .panel-title-grid{
+    grid-template-columns: 1fr;
     gap: 10px;
   }
-  .legend-inline{
-    justify-content:flex-start;
-  }
+  .panel-actions{ justify-content:flex-start; }
+  .legend-inline{ justify-content:flex-start; }
 }

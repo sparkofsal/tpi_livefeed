@@ -22,89 +22,108 @@
     </div>
   </div>
 
-  <!-- STACKED PANELS -->
-  <div class="stack">
+  <main class="app">
 
-    <!-- TOP: ACTION ITEMS -->
-    <section class="panel" id="panel-action">
-      <div class="panel-title">
-        <div class="panel-title-left">
-          <h2>New Parts, Projects and HOT Requests</h2>
-          <div id="action-count" class="panel-sub">—</div>
+    <!-- HOME -->
+    <section id="view-home" class="view active">
+      <div class="home-card">
+        <h2 class="home-title">Choose a board</h2>
+        <p class="home-sub">Pick what you want to display. (More modules can be added later.)</p>
+
+        <div class="home-buttons">
+          <button class="btn btn-big" id="btn-open-action" type="button">New Parts & Projects</button>
+          <button class="btn btn-big" id="btn-open-feed" type="button">Live Notes</button>
+          <button class="btn btn-big" id="btn-open-shipping" type="button">Shipping Schedule</button>
         </div>
-
-        <!-- Legend (squares) in the header empty space -->
-        <div class="legend-inline" aria-label="Needed by color key">
-          <span class="legend-chip">
-            <span class="legend-swatch needed-red"></span>
-            ≤ 7 days / overdue
-          </span>
-          <span class="legend-chip">
-            <span class="legend-swatch needed-yellow"></span>
-            ≤ 10 days
-          </span>
-          <span class="legend-chip">
-            <span class="legend-swatch needed-clear"></span>
-            &gt; 10 days
-          </span>
-        </div>
-
-        <!-- Maximize toggle (same size as .btn links) -->
-        <button class="btn btn-max" id="btn-max-action" type="button" aria-label="Maximize Action Items">
-          ⤢ Maximize
-        </button>
-      </div>
-
-      <div class="table-container no-scrollbar action-height" id="action-container">
-        <table>
-          <thead>
-            <tr id="action-headers"></tr>
-          </thead>
-          <tbody id="action-body"></tbody>
-        </table>
       </div>
     </section>
 
-    <!-- BOTTOM: LIVE NOTES -->
-    <section class="panel" id="panel-feed">
-      <div class="panel-title">
-        <div class="panel-title-left">
-          <h2>Live Notes & Action Items</h2>
-          <div id="feed-count" class="panel-sub">—</div>
+    <!-- ACTION -->
+    <section id="view-action" class="view">
+      <div class="panel" id="panel-action">
+        <div class="panel-title panel-title-grid">
+          <div class="panel-title-left">
+            <h2>New Parts & Projects (Action Items)</h2>
+            <div id="action-count" class="panel-sub">—</div>
+          </div>
+
+          <div class="legend-inline" aria-label="Needed by color key">
+            <span class="legend-chip"><span class="legend-swatch needed-red"></span>≤ 7 days / overdue</span>
+            <span class="legend-chip"><span class="legend-swatch needed-yellow"></span>≤ 10 days</span>
+            <span class="legend-chip"><span class="legend-swatch needed-clear"></span>&gt; 10 days</span>
+          </div>
+
+          <div class="panel-actions">
+            <button class="btn" id="btn-back-action" type="button">← Back</button>
+          </div>
         </div>
 
-        <!-- Legend (same as top) -->
-        <div class="legend-inline" aria-label="Needed by color key">
-          <span class="legend-chip">
-            <span class="legend-swatch needed-red"></span>
-            ≤ 7 days / overdue
-          </span>
-          <span class="legend-chip">
-            <span class="legend-swatch needed-yellow"></span>
-            ≤ 10 days
-          </span>
-          <span class="legend-chip">
-            <span class="legend-swatch needed-clear"></span>
-            &gt; 10 days
-          </span>
+        <div class="table-container no-scrollbar action-height" id="action-container">
+          <table>
+            <thead><tr id="action-headers"></tr></thead>
+            <tbody id="action-body"></tbody>
+          </table>
         </div>
-
-        <button class="btn btn-max" id="btn-max-feed" type="button" aria-label="Maximize Live Notes">
-          ⤢ Maximize
-        </button>
-      </div>
-
-      <div class="table-container no-scrollbar feed-height" id="feed-container">
-        <table>
-          <thead>
-            <tr id="feed-headers"></tr>
-          </thead>
-          <tbody id="feed-body"></tbody>
-        </table>
       </div>
     </section>
 
-  </div>
+    <!-- FEED -->
+    <section id="view-feed" class="view">
+      <div class="panel" id="panel-feed">
+        <div class="panel-title panel-title-grid">
+          <div class="panel-title-left">
+            <h2>Live Notes (Scrolling Feed)</h2>
+            <div id="feed-count" class="panel-sub">—</div>
+          </div>
+
+          <div class="legend-inline" aria-label="Needed by color key">
+            <span class="legend-chip"><span class="legend-swatch needed-red"></span>≤ 7 days / overdue</span>
+            <span class="legend-chip"><span class="legend-swatch needed-yellow"></span>≤ 10 days</span>
+            <span class="legend-chip"><span class="legend-swatch needed-clear"></span>&gt; 10 days</span>
+          </div>
+
+          <div class="panel-actions">
+            <button class="btn" id="btn-back-feed" type="button">← Back</button>
+          </div>
+        </div>
+
+        <div class="table-container no-scrollbar feed-height" id="feed-container">
+          <table>
+            <thead><tr id="feed-headers"></tr></thead>
+            <tbody id="feed-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SHIPPING (will show error until you create a tab + gid) -->
+    <section id="view-shipping" class="view">
+      <div class="panel" id="panel-shipping">
+        <div class="panel-title panel-title-grid shipping-title-grid">
+          <div class="panel-title-left">
+            <h2>Shipping Schedule</h2>
+            <div id="shipping-count" class="panel-sub">—</div>
+          </div>
+
+          <div class="shipping-note">
+            Sorted by Ship Date (oldest → newest)
+          </div>
+
+          <div class="panel-actions">
+            <button class="btn" id="btn-back-shipping" type="button">← Back</button>
+          </div>
+        </div>
+
+        <div class="table-container no-scrollbar ship-height" id="shipping-container">
+          <table>
+            <thead><tr id="shipping-headers"></tr></thead>
+            <tbody id="shipping-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
 
   <script src="script.js"></script>
 </body>
