@@ -360,10 +360,12 @@ async function loadBoard() {
 }
 
 /* =========================
-   AUTO-SCROLL
+   AUTO-SCROLL (TV-SMOOTH)
    =========================
-   - Feed: always auto-scrolls unless user hovers it
-   - Action: auto-scrolls ONLY when maximized (unless user hovers it)
+   WHY THIS FIXES TV "VIBRATION":
+   - requestAnimationFrame syncs with the display refresh
+   - whole-pixel scrolling avoids sub-pixel shimmer
+   - throttled FPS keeps TVs stable
 */
 let pauseScrollFeed = false;
 let pauseScrollAction = false;
@@ -374,28 +376,43 @@ feedContainer.addEventListener('mouseleave', () => pauseScrollFeed = false);
 actionContainer.addEventListener('mouseenter', () => pauseScrollAction = true);
 actionContainer.addEventListener('mouseleave', () => pauseScrollAction = false);
 
-// Live Notes auto-scroll (always)
-setInterval(() => {
-  if (pauseScrollFeed) return;
+// ===== TV tuning knobs =====
+const TARGET_FPS = 24;          // normal refresh rate 30fps; for tvs 24 or 25fps may help
+const FRAME_MS = 1000 / TARGET_FPS;
 
-  const max = feedContainer.scrollHeight - feedContainer.clientHeight;
-  if (max <= 0) return;
+const FEED_PX_PER_FRAME = 1;    // whole pixels = no shimmer
+const ACTION_PX_PER_FRAME = 1;
 
-  feedContainer.scrollTop += SCROLL_SPEED;
-  if (feedContainer.scrollTop >= max) feedContainer.scrollTop = 0;
-}, SCROLL_TICK);
+let lastFrameTime = 0;
 
-// Action Items auto-scroll (only when maximized)
-setInterval(() => {
-  if (!document.body.classList.contains('max-action')) return;
-  if (pauseScrollAction) return;
+function tick(now) {
+  if (now - lastFrameTime >= FRAME_MS) {
+    lastFrameTime = now;
 
-  const max = actionContainer.scrollHeight - actionContainer.clientHeight;
-  if (max <= 0) return;
+    // --- Live Notes (always scrolling unless paused) ---
+    if (!pauseScrollFeed) {
+      const max = feedContainer.scrollHeight - feedContainer.clientHeight;
+      if (max > 0) {
+        feedContainer.scrollTop += FEED_PX_PER_FRAME;
+        if (feedContainer.scrollTop >= max) feedContainer.scrollTop = 0;
+      }
+    }
 
-  actionContainer.scrollTop += SCROLL_SPEED;
-  if (actionContainer.scrollTop >= max) actionContainer.scrollTop = 0;
-}, SCROLL_TICK);
+    // --- Action Items (only when maximized) ---
+    if (document.body.classList.contains('max-action') && !pauseScrollAction) {
+      const maxA = actionContainer.scrollHeight - actionContainer.clientHeight;
+      if (maxA > 0) {
+        actionContainer.scrollTop += ACTION_PX_PER_FRAME;
+        if (actionContainer.scrollTop >= maxA) actionContainer.scrollTop = 0;
+      }
+    }
+  }
+
+  requestAnimationFrame(tick);
+}
+
+requestAnimationFrame(tick);
+
 
 // ===== BOOT =====
 loadBoard();
