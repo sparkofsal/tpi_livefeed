@@ -24,16 +24,58 @@
 
   <main class="app">
 
-    <!-- HOME -->
+    <!-- HOME (MAIN MENU) -->
     <section id="view-home" class="view active">
       <div class="home-card">
-        <h2 class="home-title">Choose a board</h2>
-        <p class="home-sub">Pick what you want to display. (More modules can be added later.)</p>
+        <h2 class="home-title">Choose a module</h2>
+        <p class="home-sub">Pick what you want to display. More modules can be added anytime.</p>
 
         <div class="home-buttons">
           <button class="btn btn-big" id="btn-open-action" type="button">New Parts & Projects</button>
           <button class="btn btn-big" id="btn-open-feed" type="button">Live Notes</button>
           <button class="btn btn-big" id="btn-open-shipping" type="button">Shipping Schedule</button>
+
+          <button class="btn btn-big" id="btn-open-capacity" type="button">Capacity</button>
+          <button class="btn btn-big" id="btn-open-schedules" type="button">Schedules</button>
+          <button class="btn btn-big" id="btn-open-calculators" type="button">Calculators</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCHEDULES SUBMENU -->
+    <section id="view-schedules" class="view">
+      <div class="home-card">
+        <div class="submenu-header">
+          <h2 class="home-title">Schedules</h2>
+          <button class="btn" id="btn-back-schedules" type="button">← Back</button>
+        </div>
+
+        <p class="home-sub">Choose a schedule board.</p>
+
+        <div class="home-buttons">
+          <button class="btn btn-big" id="btn-open-sched-laser" type="button">Laser</button>
+          <button class="btn btn-big" id="btn-open-sched-emk" type="button">EMK</button>
+          <button class="btn btn-big" id="btn-open-sched-tru1000" type="button">TRU1000</button>
+          <button class="btn btn-big" id="btn-open-sched-vaski" type="button">VASKI</button>
+          <button class="btn btn-big" id="btn-open-sched-program" type="button">Program</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CALCULATORS SUBMENU -->
+    <section id="view-calculators" class="view">
+      <div class="home-card">
+        <div class="submenu-header">
+          <h2 class="home-title">Calculators</h2>
+          <button class="btn" id="btn-back-calculators" type="button">← Back</button>
+        </div>
+
+        <p class="home-sub">Choose a calculator.</p>
+
+        <div class="home-buttons">
+          <button class="btn btn-big" id="btn-open-calc-bending" type="button">Bending</button>
+          <button class="btn btn-big" id="btn-open-calc-countersink" type="button">Countersink</button>
+          <button class="btn btn-big" id="btn-open-calc-linear" type="button">Linear Cutting</button>
         </div>
       </div>
     </section>
@@ -96,7 +138,7 @@
       </div>
     </section>
 
-    <!-- SHIPPING (will show error until you create a tab + gid) -->
+    <!-- SHIPPING -->
     <section id="view-shipping" class="view">
       <div class="panel" id="panel-shipping">
         <div class="panel-title panel-title-grid shipping-title-grid">
@@ -105,9 +147,7 @@
             <div id="shipping-count" class="panel-sub">—</div>
           </div>
 
-          <div class="shipping-note">
-            Sorted by Ship Date (oldest → newest)
-          </div>
+          <div class="shipping-note">Sorted by Ship Date (oldest → newest)</div>
 
           <div class="panel-actions">
             <button class="btn" id="btn-back-shipping" type="button">← Back</button>
@@ -120,6 +160,39 @@
             <tbody id="shipping-body"></tbody>
           </table>
         </div>
+      </div>
+    </section>
+
+    <!-- CAPACITY (placeholder for now) -->
+    <section id="view-capacity" class="view">
+      <div class="home-card">
+        <div class="submenu-header">
+          <h2 class="home-title">Capacity</h2>
+          <button class="btn" id="btn-back-capacity" type="button">← Back</button>
+        </div>
+        <p class="home-sub">Coming soon. This can be a sheet-based board or a calculated dashboard.</p>
+      </div>
+    </section>
+
+    <!-- PLACEHOLDER: SCHEDULE MODULE VIEW -->
+    <section id="view-schedule-module" class="view">
+      <div class="home-card">
+        <div class="submenu-header">
+          <h2 class="home-title" id="schedule-module-title">Schedule</h2>
+          <button class="btn" id="btn-back-schedule-module" type="button">← Back</button>
+        </div>
+        <p class="home-sub" id="schedule-module-sub">Coming soon.</p>
+      </div>
+    </section>
+
+    <!-- PLACEHOLDER: CALCULATOR MODULE VIEW -->
+    <section id="view-calculator-module" class="view">
+      <div class="home-card">
+        <div class="submenu-header">
+          <h2 class="home-title" id="calc-module-title">Calculator</h2>
+          <button class="btn" id="btn-back-calc-module" type="button">← Back</button>
+        </div>
+        <p class="home-sub" id="calc-module-sub">Coming soon.</p>
       </div>
     </section>
 

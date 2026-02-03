@@ -1,28 +1,12 @@
 /**************************************************
- * TPI Live Communication Board — Modular UI
- *
- * Home screen shows only buttons.
- * Clicking a module shows only that module.
- *
- * Needed By:
- * - RED <= 7 days / overdue
- * - YELLOW <= 10 days (but > 7)
- * - CLEAR > 10 days
- *
- * NEEDED BY display = date only (no time)
- *
- * Auto-scroll:
- * - Runs ONLY for the module currently visible
- * - requestAnimationFrame + whole pixels for TV smoothness
+ * TPI Live Communication Board — Modular UI + Submenus
  **************************************************/
 
 // ===== Spreadsheet + GIDs =====
 const sheetID = '1UFkn-d_t3DTt1RCHqp4K3HOuTMyrEVBmZnj1in1PoHc';
 const GID_LIVE_NOTES = '863386477';
 const GID_NEW_PARTS  = '2113651494';
-
-// Shipping not ready yet: leave blank until you create a tab
-const GID_SHIPPING = ''; // e.g. '123456789'
+const GID_SHIPPING = ''; // add later when you have it
 
 // ===== Form URLs =====
 const FORM_URL_LIVE_NOTES =
@@ -44,8 +28,6 @@ const COL_STATUS    = 'STATUS';
 const COL_SAMPLES   = 'SAMPLES';
 const COL_PRIORITY  = 'PRIORITY';
 const COL_NEEDED_BY = 'NEEDED BY';
-
-// Shipping column name (later)
 const COL_SHIP_DATE = 'SHIP DATE';
 
 // ===== Visible columns by index =====
@@ -57,38 +39,75 @@ const viewHome = document.getElementById('view-home');
 const viewAction = document.getElementById('view-action');
 const viewFeed = document.getElementById('view-feed');
 const viewShipping = document.getElementById('view-shipping');
+const viewCapacity = document.getElementById('view-capacity');
 
-// ===== DOM: home buttons =====
-const btnOpenAction = document.getElementById('btn-open-action');
-const btnOpenFeed = document.getElementById('btn-open-feed');
-const btnOpenShipping = document.getElementById('btn-open-shipping');
+const viewSchedules = document.getElementById('view-schedules');
+const viewCalculators = document.getElementById('view-calculators');
 
-// ===== DOM: back buttons =====
-const btnBackAction = document.getElementById('btn-back-action');
-const btnBackFeed = document.getElementById('btn-back-feed');
-const btnBackShipping = document.getElementById('btn-back-shipping');
+const viewScheduleModule = document.getElementById('view-schedule-module');
+const scheduleModuleTitle = document.getElementById('schedule-module-title');
+const scheduleModuleSub = document.getElementById('schedule-module-sub');
 
-// ===== DOM: action =====
+const viewCalcModule = document.getElementById('view-calculator-module');
+const calcModuleTitle = document.getElementById('calc-module-title');
+const calcModuleSub = document.getElementById('calc-module-sub');
+
+// ===== DOM: buttons =====
+document.getElementById('btn-live-notes').href = FORM_URL_LIVE_NOTES;
+document.getElementById('btn-new-parts').href = FORM_URL_NEW_PARTS;
+
+// Home
+document.getElementById('btn-open-action').addEventListener('click', () => setView('action'));
+document.getElementById('btn-open-feed').addEventListener('click', () => setView('feed'));
+document.getElementById('btn-open-shipping').addEventListener('click', () => setView('shipping'));
+document.getElementById('btn-open-capacity').addEventListener('click', () => setView('capacity'));
+document.getElementById('btn-open-schedules').addEventListener('click', () => setView('schedules'));
+document.getElementById('btn-open-calculators').addEventListener('click', () => setView('calculators'));
+
+// Back buttons
+document.getElementById('btn-back-action').addEventListener('click', () => setView('home'));
+document.getElementById('btn-back-feed').addEventListener('click', () => setView('home'));
+document.getElementById('btn-back-shipping').addEventListener('click', () => setView('home'));
+document.getElementById('btn-back-capacity').addEventListener('click', () => setView('home'));
+
+document.getElementById('btn-back-schedules').addEventListener('click', () => setView('home'));
+document.getElementById('btn-back-calculators').addEventListener('click', () => setView('home'));
+
+document.getElementById('btn-back-schedule-module').addEventListener('click', () => setView('schedules'));
+document.getElementById('btn-back-calc-module').addEventListener('click', () => setView('calculators'));
+
+// Schedules submenu
+document.getElementById('btn-open-sched-laser').addEventListener('click', () => openScheduleModule('Laser'));
+document.getElementById('btn-open-sched-emk').addEventListener('click', () => openScheduleModule('EMK'));
+document.getElementById('btn-open-sched-tru1000').addEventListener('click', () => openScheduleModule('TRU1000'));
+document.getElementById('btn-open-sched-vaski').addEventListener('click', () => openScheduleModule('VASKI'));
+document.getElementById('btn-open-sched-program').addEventListener('click', () => openScheduleModule('Program'));
+
+// Calculators submenu
+document.getElementById('btn-open-calc-bending').addEventListener('click', () => openCalcModule('Bending'));
+document.getElementById('btn-open-calc-countersink').addEventListener('click', () => openCalcModule('Countersink'));
+document.getElementById('btn-open-calc-linear').addEventListener('click', () => openCalcModule('Linear Cutting'));
+
+// ESC always returns to home
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') setView('home');
+});
+
+// ===== DOM: tables =====
 const actionHeaders = document.getElementById('action-headers');
 const actionBody = document.getElementById('action-body');
 const actionCount = document.getElementById('action-count');
 const actionContainer = document.getElementById('action-container');
 
-// ===== DOM: feed =====
 const feedHeaders = document.getElementById('feed-headers');
 const feedBody = document.getElementById('feed-body');
 const feedCount = document.getElementById('feed-count');
 const feedContainer = document.getElementById('feed-container');
 
-// ===== DOM: shipping =====
 const shippingHeaders = document.getElementById('shipping-headers');
 const shippingBody = document.getElementById('shipping-body');
 const shippingCount = document.getElementById('shipping-count');
 const shippingContainer = document.getElementById('shipping-container');
-
-// ===== Wire form buttons =====
-document.getElementById('btn-live-notes').href = FORM_URL_LIVE_NOTES;
-document.getElementById('btn-new-parts').href = FORM_URL_NEW_PARTS;
 
 // ===== Helpers =====
 const normalize = v => String(v ?? '').trim().toUpperCase();
@@ -137,10 +156,7 @@ async function fetchGvizTable(gid) {
 
   const start = txt.indexOf('{');
   const end = txt.lastIndexOf('}');
-  if (start === -1 || end === -1) {
-    throw new Error('No gviz JSON returned. Check Sheet sharing (Anyone with link = Viewer).');
-  }
-
+  if (start === -1 || end === -1) throw new Error('No gviz JSON returned. Check Sheet sharing.');
   const json = JSON.parse(txt.slice(start, end + 1));
   if (!json?.table) throw new Error('Parsed JSON but missing table.');
   return json.table;
@@ -159,30 +175,26 @@ function buildHeader(cols, visibleCols) {
   return visibleCols.map(i => `<th>${cols[i]?.label ?? ''}</th>`).join('');
 }
 
-// Row builder for Action/Feed
 function buildRow(row, cols, visibleCols, opts = {}) {
   const tr = document.createElement('tr');
 
-  // HOT emphasis (feed)
   if (opts.priorityIdx !== undefined) {
     const p = normalize(cellVal(row.c[opts.priorityIdx]));
     if (p === 'HOT') tr.classList.add('row-hot');
   }
 
-  // Samples highlight (action)
   if (opts.samplesIdx !== undefined) {
     const s = normalize(cellVal(row.c[opts.samplesIdx]));
     if (s === 'YES') tr.classList.add('row-sample');
   }
 
-  // HOLD dimming
   if (opts.statusIdx !== undefined) {
     const st = normalize(cellVal(row.c[opts.statusIdx]));
     if (st === 'HOLD') tr.classList.add('row-hold');
   }
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setHours(0,0,0,0);
   const todayMs = today.getTime();
 
   visibleCols.forEach(i => {
@@ -190,12 +202,10 @@ function buildRow(row, cols, visibleCols, opts = {}) {
     const header = normalize(cols[i]?.label);
     const v = cellVal(row.c[i]);
 
-    // Display
     if (header === 'NEEDED BY') td.textContent = formatDateOnly(v);
     else if (header.includes('TIME') || header.includes('DATE')) td.textContent = formatTimestamp(v);
     else td.textContent = v;
 
-    // NEEDED BY colors (cell only)
     if (opts.neededByIdx !== undefined && i === opts.neededByIdx) {
       const dueMs = parseAnyDateMs(v);
       if (Number.isFinite(dueMs) && dueMs !== Infinity) {
@@ -211,21 +221,16 @@ function buildRow(row, cols, visibleCols, opts = {}) {
   return tr;
 }
 
-// Row builder for Shipping (simple)
-function buildRowShipping(row, cols, visibleCols) {
+function buildRowSimple(row, cols, visibleCols) {
   const tr = document.createElement('tr');
-
   visibleCols.forEach(i => {
     const td = document.createElement('td');
     const header = normalize(cols[i]?.label);
     const v = cellVal(row.c[i]);
-
     if (header.includes('DATE')) td.textContent = formatDateOnly(v);
     else td.textContent = v;
-
     tr.appendChild(td);
   });
-
   return tr;
 }
 
@@ -238,11 +243,15 @@ function updateClock() {
    ========================= */
 let currentView = 'home';
 
+const ALL_VIEWS = [
+  viewHome, viewAction, viewFeed, viewShipping, viewCapacity,
+  viewSchedules, viewCalculators, viewScheduleModule, viewCalcModule
+];
+
 function setView(view) {
   currentView = view;
 
-  // HARD hide everything first (so CSS caching cannot break it)
-  [viewHome, viewAction, viewFeed, viewShipping].forEach(v => {
+  ALL_VIEWS.forEach(v => {
     v.classList.remove('active');
     v.style.display = 'none';
   });
@@ -251,14 +260,18 @@ function setView(view) {
     home: viewHome,
     action: viewAction,
     feed: viewFeed,
-    shipping: viewShipping
+    shipping: viewShipping,
+    capacity: viewCapacity,
+    schedules: viewSchedules,
+    calculators: viewCalculators,
+    scheduleModule: viewScheduleModule,
+    calcModule: viewCalcModule
   };
 
   const target = map[view] || viewHome;
   target.classList.add('active');
   target.style.display = 'block';
 
-  // Load only what we need
   if (view === 'action') {
     actionContainer.scrollTop = 0;
     loadActionOnly();
@@ -273,21 +286,20 @@ function setView(view) {
   }
 }
 
-// Buttons
-btnOpenAction.addEventListener('click', () => setView('action'));
-btnOpenFeed.addEventListener('click', () => setView('feed'));
-btnOpenShipping.addEventListener('click', () => setView('shipping'));
+// open submenu modules (placeholders for now)
+function openScheduleModule(name) {
+  scheduleModuleTitle.textContent = `${name} Schedule`;
+  scheduleModuleSub.textContent = `Coming soon. This will connect to a Google Sheet tab for ${name}.`;
+  setView('scheduleModule');
+}
 
-btnBackAction.addEventListener('click', () => setView('home'));
-btnBackFeed.addEventListener('click', () => setView('home'));
-btnBackShipping.addEventListener('click', () => setView('home'));
+function openCalcModule(name) {
+  calcModuleTitle.textContent = `${name} Calculator`;
+  calcModuleSub.textContent = `Coming soon. We will build an on-screen calculator for ${name}.`;
+  setView('calcModule');
+}
 
-// ESC returns home
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') setView('home');
-});
-
-// ===== Loaders =====
+/* ===== Loading for existing sheet modules ===== */
 async function loadActionOnly() {
   try {
     const parts = await fetchGvizTable(GID_NEW_PARTS);
@@ -302,10 +314,7 @@ async function loadActionOnly() {
     const idxSamples = map[normalize(COL_SAMPLES)];
     const idxNeeded = map[normalize(COL_NEEDED_BY)];
 
-    const rows = rowsAll.filter(r => {
-      if (idxStatus === undefined) return true;
-      return normalize(cellVal(r.c[idxStatus])) !== 'DONE';
-    });
+    const rows = rowsAll.filter(r => idxStatus === undefined || normalize(cellVal(r.c[idxStatus])) !== 'DONE');
 
     rows.sort((a, b) => {
       const sa = idxStatus !== undefined ? statusRank(cellVal(a.c[idxStatus])) : 5;
@@ -357,10 +366,7 @@ async function loadFeedOnly() {
       return tb - ta;
     });
 
-    const rows = rowsAll.filter(r => {
-      if (idxStatus === undefined) return true;
-      return normalize(cellVal(r.c[idxStatus])) !== 'DONE';
-    });
+    const rows = rowsAll.filter(r => idxStatus === undefined || normalize(cellVal(r.c[idxStatus])) !== 'DONE');
 
     rows.forEach(r => {
       feedBody.appendChild(buildRow(r, cols, COLS_LIVE_NOTES, {
@@ -380,9 +386,7 @@ async function loadFeedOnly() {
 
 async function loadShippingOnly() {
   try {
-    if (!GID_SHIPPING) {
-      throw new Error('Shipping module not configured yet (missing GID_SHIPPING).');
-    }
+    if (!GID_SHIPPING) throw new Error('Shipping module not configured yet (missing GID_SHIPPING).');
 
     const ship = await fetchGvizTable(GID_SHIPPING);
     const cols = ship.cols || [];
@@ -395,14 +399,10 @@ async function loadShippingOnly() {
 
     const idxShipDate = map[normalize(COL_SHIP_DATE)];
     if (idxShipDate !== undefined) {
-      rowsAll.sort((a, b) => {
-        const da = parseAnyDateMs(cellVal(a.c[idxShipDate]));
-        const db = parseAnyDateMs(cellVal(b.c[idxShipDate]));
-        return da - db;
-      });
+      rowsAll.sort((a, b) => parseAnyDateMs(cellVal(a.c[idxShipDate])) - parseAnyDateMs(cellVal(b.c[idxShipDate])));
     }
 
-    rowsAll.forEach(r => shippingBody.appendChild(buildRowShipping(r, cols, visible)));
+    rowsAll.forEach(r => shippingBody.appendChild(buildRowSimple(r, cols, visible)));
     shippingCount.textContent = `${rowsAll.length} shipments`;
   } catch (err) {
     console.error(err);
@@ -411,16 +411,14 @@ async function loadShippingOnly() {
   }
 }
 
-// Refresh only active module
+// Refresh only active table modules
 function refreshActive() {
   if (currentView === 'action') loadActionOnly();
   if (currentView === 'feed') loadFeedOnly();
   if (currentView === 'shipping') loadShippingOnly();
 }
 
-/* =========================
-   AUTO-SCROLL (TV-SMOOTH)
-   ========================= */
+/* ===== Auto-scroll (TV smooth, only in visible tables) ===== */
 let pauseScrollFeed = false;
 let pauseScrollAction = false;
 
@@ -430,7 +428,6 @@ feedContainer.addEventListener('mouseleave', () => pauseScrollFeed = false);
 actionContainer.addEventListener('mouseenter', () => pauseScrollAction = true);
 actionContainer.addEventListener('mouseleave', () => pauseScrollAction = false);
 
-// TV tuning
 const TARGET_FPS = 30;
 const FRAME_MS = 1000 / TARGET_FPS;
 const FEED_PX_PER_FRAME = 1;
@@ -465,8 +462,7 @@ function tick(now) {
 requestAnimationFrame(tick);
 
 // ===== BOOT =====
-// Force initial visibility in case CSS is cached/ignored
-[viewAction, viewFeed, viewShipping].forEach(v => v.style.display = 'none');
+ALL_VIEWS.forEach(v => v.style.display = 'none');
 viewHome.style.display = 'block';
 
 setView('home');

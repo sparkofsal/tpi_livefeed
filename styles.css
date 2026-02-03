@@ -74,6 +74,13 @@ body {
   flex-wrap:wrap;
 }
 
+.submenu-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
 .btn-big{
   padding: 16px 18px;
   font-size: 1.05rem;
