@@ -1,12 +1,26 @@
 /**************************************************
  * TPI Live Communication Board — Modular UI + Submenus
+ * + Schedules connected to Master Schedule spreadsheet
+ * + Schedule STATUS pill colors
+ * + Total Estimated Hours shown in schedule count
  **************************************************/
 
-// ===== Spreadsheet + GIDs =====
+/* =========================
+   LIVE FEED SHEET (your existing board)
+   ========================= */
 const sheetID = '1UFkn-d_t3DTt1RCHqp4K3HOuTMyrEVBmZnj1in1PoHc';
 const GID_LIVE_NOTES = '863386477';
 const GID_NEW_PARTS  = '2113651494';
-const GID_SHIPPING = ''; // add later when you have it
+const GID_SHIPPING = ''; // add later
+
+/* =========================
+   MASTER SCHEDULE SHEET (Schedules)
+   ========================= */
+const SCHEDULE_SHEET_ID = '1fnOGM1YZ2XB0JbomEcZl5JLt6XZnXjVpDJS0Z-9JsgU';
+const GID_MASTER_SCHEDULE = '444063954';
+
+// Columns you want (B,C,D,E,F,G,H,I,J,L,N)
+const SCHEDULE_VISIBLE_BY_LETTER_INDEX = [1,2,3,4,5,6,7,8,9,11,13];
 
 // ===== Form URLs =====
 const FORM_URL_LIVE_NOTES =
@@ -30,11 +44,18 @@ const COL_PRIORITY  = 'PRIORITY';
 const COL_NEEDED_BY = 'NEEDED BY';
 const COL_SHIP_DATE = 'SHIP DATE';
 
-// ===== Visible columns by index =====
+// Schedules columns
+const COL_MACHINE = 'MACHINE';
+const COL_DUE_DATE = 'DUE DATE';
+const COL_EST_HOURS = 'EST TIME (HOURS)'; // your Column I
+
+// ===== Visible columns by index (your existing live board) =====
 const COLS_LIVE_NOTES = [0,1,2,3,4,5,6,7,8];
 const COLS_NEW_PARTS  = [0,1,2,3,4,5,6,7,8];
 
-// ===== DOM: views =====
+/* =========================
+   DOM: views
+   ========================= */
 const viewHome = document.getElementById('view-home');
 const viewAction = document.getElementById('view-action');
 const viewFeed = document.getElementById('view-feed');
@@ -48,50 +69,10 @@ const viewScheduleModule = document.getElementById('view-schedule-module');
 const scheduleModuleTitle = document.getElementById('schedule-module-title');
 const scheduleModuleSub = document.getElementById('schedule-module-sub');
 
+// calculators placeholder
 const viewCalcModule = document.getElementById('view-calculator-module');
 const calcModuleTitle = document.getElementById('calc-module-title');
 const calcModuleSub = document.getElementById('calc-module-sub');
-
-// ===== DOM: buttons =====
-document.getElementById('btn-live-notes').href = FORM_URL_LIVE_NOTES;
-document.getElementById('btn-new-parts').href = FORM_URL_NEW_PARTS;
-
-// Home
-document.getElementById('btn-open-action').addEventListener('click', () => setView('action'));
-document.getElementById('btn-open-feed').addEventListener('click', () => setView('feed'));
-document.getElementById('btn-open-shipping').addEventListener('click', () => setView('shipping'));
-document.getElementById('btn-open-capacity').addEventListener('click', () => setView('capacity'));
-document.getElementById('btn-open-schedules').addEventListener('click', () => setView('schedules'));
-document.getElementById('btn-open-calculators').addEventListener('click', () => setView('calculators'));
-
-// Back buttons
-document.getElementById('btn-back-action').addEventListener('click', () => setView('home'));
-document.getElementById('btn-back-feed').addEventListener('click', () => setView('home'));
-document.getElementById('btn-back-shipping').addEventListener('click', () => setView('home'));
-document.getElementById('btn-back-capacity').addEventListener('click', () => setView('home'));
-
-document.getElementById('btn-back-schedules').addEventListener('click', () => setView('home'));
-document.getElementById('btn-back-calculators').addEventListener('click', () => setView('home'));
-
-document.getElementById('btn-back-schedule-module').addEventListener('click', () => setView('schedules'));
-document.getElementById('btn-back-calc-module').addEventListener('click', () => setView('calculators'));
-
-// Schedules submenu
-document.getElementById('btn-open-sched-laser').addEventListener('click', () => openScheduleModule('Laser'));
-document.getElementById('btn-open-sched-emk').addEventListener('click', () => openScheduleModule('EMK'));
-document.getElementById('btn-open-sched-tru1000').addEventListener('click', () => openScheduleModule('TRU1000'));
-document.getElementById('btn-open-sched-vaski').addEventListener('click', () => openScheduleModule('VASKI'));
-document.getElementById('btn-open-sched-program').addEventListener('click', () => openScheduleModule('Program'));
-
-// Calculators submenu
-document.getElementById('btn-open-calc-bending').addEventListener('click', () => openCalcModule('Bending'));
-document.getElementById('btn-open-calc-countersink').addEventListener('click', () => openCalcModule('Countersink'));
-document.getElementById('btn-open-calc-linear').addEventListener('click', () => openCalcModule('Linear Cutting'));
-
-// ESC always returns to home
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') setView('home');
-});
 
 // ===== DOM: tables =====
 const actionHeaders = document.getElementById('action-headers');
@@ -109,7 +90,19 @@ const shippingBody = document.getElementById('shipping-body');
 const shippingCount = document.getElementById('shipping-count');
 const shippingContainer = document.getElementById('shipping-container');
 
-// ===== Helpers =====
+// ===== DOM: schedule table =====
+const scheduleHeaders = document.getElementById('schedule-headers');
+const scheduleBody = document.getElementById('schedule-body');
+const scheduleCount = document.getElementById('schedule-count');
+const scheduleContainer = document.getElementById('schedule-container');
+
+// ===== Wire form buttons =====
+document.getElementById('btn-live-notes').href = FORM_URL_LIVE_NOTES;
+document.getElementById('btn-new-parts').href = FORM_URL_NEW_PARTS;
+
+/* =========================
+   Helpers
+   ========================= */
 const normalize = v => String(v ?? '').trim().toUpperCase();
 const cellVal = c => c?.v ?? '';
 
@@ -149,8 +142,8 @@ function formatTimestamp(v) {
   return new Date(ms).toLocaleString();
 }
 
-async function fetchGvizTable(gid) {
-  const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?gid=${gid}&tqx=out:json&cb=${Date.now()}`;
+async function fetchGvizTable(sheetId, gid) {
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}&tqx=out:json&cb=${Date.now()}`;
   const res = await fetch(url);
   const txt = await res.text();
 
@@ -175,6 +168,7 @@ function buildHeader(cols, visibleCols) {
   return visibleCols.map(i => `<th>${cols[i]?.label ?? ''}</th>`).join('');
 }
 
+// Row builder for Action/Feed (needed-by colors)
 function buildRow(row, cols, visibleCols, opts = {}) {
   const tr = document.createElement('tr');
 
@@ -221,16 +215,66 @@ function buildRow(row, cols, visibleCols, opts = {}) {
   return tr;
 }
 
-function buildRowSimple(row, cols, visibleCols) {
+/* =========================
+   SCHEDULE: Status classification -> CSS classes
+   ========================= */
+function scheduleStatusClass(statusText) {
+  const s = normalize(statusText);
+  if (!s) return '';
+
+  // 🔵 ASSIGNED / OWNERS (blue-ish)
+  if (
+    s === 'GUILLERMO' ||
+    s === 'LALO' ||
+    s.includes('MIKE') ||
+    s === 'JOEY'
+  ) return 'status-assigned';
+
+  // 🟡 MATERIAL / PRE-CUT
+  if (s.includes('MATERIAL ON ORDER')) return 'status-material';
+  if (s.includes('REQUESTED MATERIAL')) return 'status-material';
+  if (s.includes('CHECKING STOCK')) return 'status-material';
+  if (s.includes('CUSTOMER MTR')) return 'status-material';
+
+  // 🔴 HOLD / PROBLEM
+  if (s.includes('ON HOLD')) return 'status-hold';
+
+  // 🟢 READY / CUTTING
+  if (s.includes('READY TO CUT')) return 'status-ready';
+  if (s.includes('CURRENTLY CUTTING')) return 'status-cutting';
+
+  // 🟠 PARTIAL / ATTENTION
+  if (s.includes('PARTIAL')) return 'status-partial';
+
+  // ⚫ COMPLETE
+  if (s.includes('COMPLETE')) return 'status-complete';
+
+  return '';
+}
+
+
+// Row builder for Schedules (date-only for DUE DATE, status pill color)
+function buildRowSchedule(row, cols, visibleCols, dueDateIdx, statusIdx) {
   const tr = document.createElement('tr');
+
   visibleCols.forEach(i => {
     const td = document.createElement('td');
-    const header = normalize(cols[i]?.label);
     const v = cellVal(row.c[i]);
-    if (header.includes('DATE')) td.textContent = formatDateOnly(v);
+
+    // DUE DATE shown as date-only
+    if (i === dueDateIdx) td.textContent = formatDateOnly(v);
     else td.textContent = v;
+
+    // STATUS pill styling
+    if (i === statusIdx) {
+      td.classList.add('status-pill');
+      const css = scheduleStatusClass(v);
+      if (css) td.classList.add(css);
+    }
+
     tr.appendChild(td);
   });
+
   return tr;
 }
 
@@ -284,14 +328,78 @@ function setView(view) {
     shippingContainer.scrollTop = 0;
     loadShippingOnly();
   }
+  if (view === 'scheduleModule') {
+    scheduleContainer.scrollTop = 0;
+    loadScheduleModule();
+  }
 }
 
-// open submenu modules (placeholders for now)
+/* =========================
+   Buttons: home + back
+   ========================= */
+document.getElementById('btn-open-action').addEventListener('click', () => setView('action'));
+document.getElementById('btn-open-feed').addEventListener('click', () => setView('feed'));
+document.getElementById('btn-open-shipping').addEventListener('click', () => setView('shipping'));
+document.getElementById('btn-open-capacity').addEventListener('click', () => setView('capacity'));
+document.getElementById('btn-open-schedules').addEventListener('click', () => setView('schedules'));
+document.getElementById('btn-open-calculators').addEventListener('click', () => setView('calculators'));
+
+document.getElementById('btn-back-action').addEventListener('click', () => setView('home'));
+document.getElementById('btn-back-feed').addEventListener('click', () => setView('home'));
+document.getElementById('btn-back-shipping').addEventListener('click', () => setView('home'));
+document.getElementById('btn-back-capacity').addEventListener('click', () => setView('home'));
+
+document.getElementById('btn-back-schedules').addEventListener('click', () => setView('home'));
+document.getElementById('btn-back-calculators').addEventListener('click', () => setView('home'));
+
+document.getElementById('btn-back-schedule-module').addEventListener('click', () => setView('schedules'));
+document.getElementById('btn-back-calc-module').addEventListener('click', () => setView('calculators'));
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') setView('home');
+});
+
+/* =========================
+   SCHEDULES: filtering setup
+   ========================= */
+const SCHEDULE_FILTERS = {
+  'LASER': ['TL2030', 'TL1030 AUTO', 'MS LASER'],
+  'EMK': ['EMK'],
+  'TRU1000': ['TRU1000'],
+  'VASKI': ['VASKI'],
+  'PROGRAM': ['PROGRAM'] // update later if needed
+};
+
+let currentScheduleKey = null;
+
 function openScheduleModule(name) {
+  currentScheduleKey = normalize(name);
+
   scheduleModuleTitle.textContent = `${name} Schedule`;
-  scheduleModuleSub.textContent = `Coming soon. This will connect to a Google Sheet tab for ${name}.`;
+
+  const machines = SCHEDULE_FILTERS[currentScheduleKey] || [];
+  if (machines.length) {
+    scheduleModuleSub.textContent = `Machine filter: ${machines.join(', ')} (sorted by DUE DATE)`;
+  } else {
+    scheduleModuleSub.textContent = `Machine filter not configured yet for "${name}".`;
+  }
+
   setView('scheduleModule');
 }
+
+// Hook submenu buttons
+document.getElementById('btn-open-sched-laser').addEventListener('click', () => openScheduleModule('Laser'));
+document.getElementById('btn-open-sched-emk').addEventListener('click', () => openScheduleModule('EMK'));
+document.getElementById('btn-open-sched-tru1000').addEventListener('click', () => openScheduleModule('TRU1000'));
+document.getElementById('btn-open-sched-vaski').addEventListener('click', () => openScheduleModule('VASKI'));
+document.getElementById('btn-open-sched-program').addEventListener('click', () => openScheduleModule('Program'));
+
+/* =========================
+   CALCULATORS (placeholders)
+   ========================= */
+document.getElementById('btn-open-calc-bending').addEventListener('click', () => openCalcModule('Bending'));
+document.getElementById('btn-open-calc-countersink').addEventListener('click', () => openCalcModule('Countersink'));
+document.getElementById('btn-open-calc-linear').addEventListener('click', () => openCalcModule('Linear Cutting'));
 
 function openCalcModule(name) {
   calcModuleTitle.textContent = `${name} Calculator`;
@@ -299,10 +407,12 @@ function openCalcModule(name) {
   setView('calcModule');
 }
 
-/* ===== Loading for existing sheet modules ===== */
+/* =========================
+   LOADERS: Action / Feed / Shipping / Schedule
+   ========================= */
 async function loadActionOnly() {
   try {
-    const parts = await fetchGvizTable(GID_NEW_PARTS);
+    const parts = await fetchGvizTable(sheetID, GID_NEW_PARTS);
     const cols = parts.cols || [];
     const rowsAll = (parts.rows || []).slice();
     const map = buildColIndexMap(cols);
@@ -348,7 +458,7 @@ async function loadActionOnly() {
 
 async function loadFeedOnly() {
   try {
-    const live = await fetchGvizTable(GID_LIVE_NOTES);
+    const live = await fetchGvizTable(sheetID, GID_LIVE_NOTES);
     const cols = live.cols || [];
     const rowsAll = (live.rows || []).slice();
     const map = buildColIndexMap(cols);
@@ -387,23 +497,8 @@ async function loadFeedOnly() {
 async function loadShippingOnly() {
   try {
     if (!GID_SHIPPING) throw new Error('Shipping module not configured yet (missing GID_SHIPPING).');
-
-    const ship = await fetchGvizTable(GID_SHIPPING);
-    const cols = ship.cols || [];
-    const rowsAll = (ship.rows || []).slice();
-    const map = buildColIndexMap(cols);
-
-    const visible = cols.map((_, i) => i);
-    shippingHeaders.innerHTML = buildHeader(cols, visible);
-    shippingBody.innerHTML = '';
-
-    const idxShipDate = map[normalize(COL_SHIP_DATE)];
-    if (idxShipDate !== undefined) {
-      rowsAll.sort((a, b) => parseAnyDateMs(cellVal(a.c[idxShipDate])) - parseAnyDateMs(cellVal(b.c[idxShipDate])));
-    }
-
-    rowsAll.forEach(r => shippingBody.appendChild(buildRowSimple(r, cols, visible)));
-    shippingCount.textContent = `${rowsAll.length} shipments`;
+    shippingBody.innerHTML = `<tr><td colspan="100%">Shipping module not implemented yet.</td></tr>`;
+    shippingCount.textContent = '—';
   } catch (err) {
     console.error(err);
     shippingBody.innerHTML = `<tr><td colspan="100%">⚠️ ${err.message}</td></tr>`;
@@ -411,14 +506,84 @@ async function loadShippingOnly() {
   }
 }
 
-// Refresh only active table modules
+async function loadScheduleModule() {
+  try {
+    if (!currentScheduleKey) throw new Error('No schedule selected.');
+
+    const machines = SCHEDULE_FILTERS[currentScheduleKey] || [];
+    if (!machines.length) throw new Error(`No machine filter configured for "${currentScheduleKey}".`);
+
+    const table = await fetchGvizTable(SCHEDULE_SHEET_ID, GID_MASTER_SCHEDULE);
+    const cols = table.cols || [];
+    const rowsAll = (table.rows || []).slice();
+    const map = buildColIndexMap(cols);
+
+    const machineIdx = map[normalize(COL_MACHINE)];
+    const dueIdx = map[normalize(COL_DUE_DATE)];
+    const statusIdx = map[normalize(COL_STATUS)];
+    const estIdx = map[normalize(COL_EST_HOURS)];
+
+    if (machineIdx === undefined) throw new Error(`Could not find "${COL_MACHINE}" column in the schedule sheet.`);
+
+    // Visible columns: B,C,D,E,F,G,H,I,J,L,N
+    const visibleCols = SCHEDULE_VISIBLE_BY_LETTER_INDEX.filter(i => i < cols.length);
+
+    scheduleHeaders.innerHTML = buildHeader(cols, visibleCols);
+    scheduleBody.innerHTML = '';
+
+    // Filter rows by machine
+    const wanted = machines.map(normalize);
+    const filtered = rowsAll.filter(r => wanted.includes(normalize(cellVal(r.c[machineIdx]))));
+
+    // Sort by DUE DATE
+    if (dueIdx !== undefined) {
+      filtered.sort((a, b) => {
+        const da = parseAnyDateMs(cellVal(a.c[dueIdx]));
+        const db = parseAnyDateMs(cellVal(b.c[dueIdx]));
+        return da - db;
+      });
+    }
+
+    // Sum estimated hours (Column I / Est Time (Hours))
+    let totalHours = 0;
+    if (estIdx !== undefined) {
+      filtered.forEach(r => {
+        const v = cellVal(r.c[estIdx]);
+        const num = Number(v);
+        if (Number.isFinite(num)) totalHours += num;
+      });
+    }
+
+    filtered.forEach(r => {
+      scheduleBody.appendChild(buildRowSchedule(r, cols, visibleCols, dueIdx, statusIdx));
+    });
+
+    // Show count + hours
+    if (estIdx !== undefined) {
+      scheduleCount.textContent = `${filtered.length} jobs • ${totalHours.toFixed(2)} hrs`;
+    } else {
+      scheduleCount.textContent = `${filtered.length} jobs`;
+    }
+
+  } catch (err) {
+    console.error(err);
+    scheduleBody.innerHTML = `<tr><td colspan="100%">⚠️ ${err.message}</td></tr>`;
+    scheduleCount.textContent = '—';
+  }
+}
+
+/* =========================
+   Refresh only active view
+   ========================= */
 function refreshActive() {
   if (currentView === 'action') loadActionOnly();
   if (currentView === 'feed') loadFeedOnly();
-  if (currentView === 'shipping') loadShippingOnly();
+  if (currentView === 'scheduleModule') loadScheduleModule();
 }
 
-/* ===== Auto-scroll (TV smooth, only in visible tables) ===== */
+/* =========================
+   Auto-scroll (only in visible tables)
+   ========================= */
 let pauseScrollFeed = false;
 let pauseScrollAction = false;
 
@@ -428,6 +593,7 @@ feedContainer.addEventListener('mouseleave', () => pauseScrollFeed = false);
 actionContainer.addEventListener('mouseenter', () => pauseScrollAction = true);
 actionContainer.addEventListener('mouseleave', () => pauseScrollAction = false);
 
+// TV tuning
 const TARGET_FPS = 30;
 const FRAME_MS = 1000 / TARGET_FPS;
 const FEED_PX_PER_FRAME = 1;
@@ -461,7 +627,9 @@ function tick(now) {
 
 requestAnimationFrame(tick);
 
-// ===== BOOT =====
+/* =========================
+   BOOT
+   ========================= */
 ALL_VIEWS.forEach(v => v.style.display = 'none');
 viewHome.style.display = 'block';
 

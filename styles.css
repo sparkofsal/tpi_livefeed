@@ -216,6 +216,69 @@ td.needed-red {
   background: rgba(0,0,0,0.18);
   white-space: nowrap;
 }
+/* ===== SCHEDULE MODULE TABLE ===== */
+.schedule-height { max-height: 78vh; }
+
+.schedule-title-grid{
+  grid-template-columns: 1fr auto auto;
+}
+
+.schedule-note{
+  color:#bbb;
+  font-size: 0.95rem;
+  padding: 6px 10px;
+  border: 1px solid #2d2d2d;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.18);
+  white-space: nowrap;
+}
+
+/* ===== SCHEDULE STATUS "PILL" COLORS ===== */
+td.status-pill {
+  font-weight: 800;
+  border-radius: 0px;
+  padding: 6px 10px;
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* ===== SCHEDULE STATUS COLORS (FINAL) ===== */
+td.status-assigned {
+  background: #cfe2ff;
+  color: #0a1d3a;
+}
+
+td.status-material {
+  background: #f4b183;
+  color: #2a1400;
+}
+
+td.status-hold {
+  background: #f8d7da;
+  color: #5a0b0b;
+}
+
+td.status-ready {
+  background: #c6e0b4;
+  color: #0b1a0b;
+}
+
+td.status-cutting {
+  background: #00b050;
+  color: #081107;
+}
+
+td.status-partial {
+  background: #f8cbad;
+  color: #3b0a0a;
+}
+
+td.status-complete {
+  background: #1f1f1f;
+  color: #ffffff;
+}
+
 
 /* ===== MOBILE ===== */
 @media (max-width: 700px) {

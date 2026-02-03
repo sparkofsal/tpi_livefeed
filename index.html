@@ -174,16 +174,33 @@
       </div>
     </section>
 
-    <!-- PLACEHOLDER: SCHEDULE MODULE VIEW -->
-    <section id="view-schedule-module" class="view">
-      <div class="home-card">
-        <div class="submenu-header">
-          <h2 class="home-title" id="schedule-module-title">Schedule</h2>
-          <button class="btn" id="btn-back-schedule-module" type="button">← Back</button>
-        </div>
-        <p class="home-sub" id="schedule-module-sub">Coming soon.</p>
+<!-- SCHEDULE MODULE (TABLE VIEW) -->
+<section id="view-schedule-module" class="view">
+  <div class="panel" id="panel-schedule">
+    <div class="panel-title panel-title-grid schedule-title-grid">
+      <div class="panel-title-left">
+        <h2 class="home-title" id="schedule-module-title">Schedule</h2>
+        <div id="schedule-count" class="panel-sub">—</div>
       </div>
-    </section>
+
+      <div class="schedule-note" id="schedule-module-sub">
+        Filtered by Machine (Column N)
+      </div>
+
+      <div class="panel-actions">
+        <button class="btn" id="btn-back-schedule-module" type="button">← Back</button>
+      </div>
+    </div>
+
+    <div class="table-container no-scrollbar schedule-height" id="schedule-container">
+      <table>
+        <thead><tr id="schedule-headers"></tr></thead>
+        <tbody id="schedule-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 
     <!-- PLACEHOLDER: CALCULATOR MODULE VIEW -->
     <section id="view-calculator-module" class="view">
