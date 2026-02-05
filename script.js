@@ -73,6 +73,8 @@ const scheduleModuleSub = document.getElementById('schedule-module-sub');
 const viewCalcModule = document.getElementById('view-calculator-module');
 const calcModuleTitle = document.getElementById('calc-module-title');
 const calcModuleSub = document.getElementById('calc-module-sub');
+const calcModuleContent = document.getElementById('calc-module-content');
+
 
 // ===== DOM: tables =====
 const actionHeaders = document.getElementById('action-headers');
@@ -402,10 +404,190 @@ document.getElementById('btn-open-calc-countersink').addEventListener('click', (
 document.getElementById('btn-open-calc-linear').addEventListener('click', () => openCalcModule('Linear Cutting'));
 
 function openCalcModule(name) {
+  const key = normalize(name);
+
   calcModuleTitle.textContent = `${name} Calculator`;
-  calcModuleSub.textContent = `Coming soon. We will build an on-screen calculator for ${name}.`;
+  calcModuleContent.innerHTML = '';
+
+  if (key === 'COUNTERSINK') {
+    calcModuleSub.textContent = 'Matches the Excel module: Min Thru Hole, Pre-punch, and OK/NOT check.';
+    renderCountersinkCalculator();
+  } else {
+    calcModuleSub.textContent = `Coming soon. We will build an on-screen calculator for ${name}.`;
+    calcModuleContent.innerHTML = `
+      <div class="calc-section">
+        <div class="calc-output">No UI yet for ${name}.</div>
+      </div>
+    `;
+  }
+
   setView('calcModule');
 }
+/* =========================
+   CALCULATOR: COUNTERSINK (Excel-matching)
+   Excel formulas:
+   MinThru = Major - ( tan(Angle/2 in rad) * (Thickness - 0.004) ) * 2
+   PrePunch = Major - (Major - Minor) * 0.75
+   OK/NOT: Minor > MinThru => OK, else NOT
+   ========================= */
+function renderCountersinkCalculator() {
+  calcModuleContent.innerHTML = `
+ <div class="calc-grid">
+
+  <!-- INPUTS -->
+  <div class="calc-section">
+    <h3>Inputs</h3>
+
+    <!-- Meaning clarification FIRST -->
+    <div class="home-sub" style="margin-bottom:10px;">
+      <b>Major</b> = Countersink diameter at surface (CSK OD)<br>
+      <b>Minor / Thru</b> = Thru hole diameter from customer print
+    </div>
+
+    <!-- Actual inputs -->
+    <div class="calc-row">
+      <label for="csk-major">Major (in)</label>
+      <input id="csk-major" type="number" step="0.0001" placeholder="e.g. 0.2500" />
+    </div>
+
+    <div class="calc-row">
+      <label for="csk-minor">Minor / Thru (in)</label>
+      <input id="csk-minor" type="number" step="0.0001" placeholder="e.g. 0.1900" />
+    </div>
+
+    <div class="calc-row">
+      <label for="csk-angle">Angle (deg)</label>
+      <input id="csk-angle" type="number" step="0.1" value="100" />
+    </div>
+
+    <div class="calc-row">
+      <label for="csk-thk">Material Thk (in)</label>
+      <input id="csk-thk" type="number" step="0.0001" placeholder="e.g. 0.0480" />
+    </div>
+
+    <!-- Actions -->
+    <div class="calc-actions">
+      <button class="btn" id="csk-btn-calc" type="button">Calculate</button>
+      <button class="btn" id="csk-btn-reset" type="button">Reset</button>
+    </div>
+
+    <!-- Notes LAST -->
+    <div class="home-sub" style="margin-top:10px;">
+      Notes: Please use Tool type 14 for best results.
+    </div>
+  </div>
+
+  <!-- OUTPUTS -->
+  <div class="calc-section">
+    <h3>Outputs</h3>
+
+    <div class="calc-output" id="csk-results">
+      Enter values and click <b>Calculate</b>.
+    </div>
+  </div>
+
+</div>
+
+  `;
+
+  const $major = document.getElementById('csk-major');
+  const $minor = document.getElementById('csk-minor');
+  const $angle = document.getElementById('csk-angle');
+  const $thk   = document.getElementById('csk-thk');
+
+  const $btnCalc = document.getElementById('csk-btn-calc');
+  const $btnReset = document.getElementById('csk-btn-reset');
+  const $results = document.getElementById('csk-results');
+
+  function n(v) {
+    const num = Number(v);
+    return Number.isFinite(num) ? num : NaN;
+  }
+
+  function fmt4(x) {
+    return Number.isFinite(x) ? x.toFixed(4) : '';
+  }
+
+  function compute() {
+    const major = n($major.value);
+    const minor = n($minor.value);
+    const angle = n($angle.value);
+    const thk   = n($thk.value);
+
+    // Basic validation (keep it simple + operator-friendly)
+    if (!Number.isFinite(major) || major <= 0) {
+      $results.innerHTML = `⚠️ Please enter a valid <b>Major</b>.`;
+      return;
+    }
+    if (!Number.isFinite(minor) || minor <= 0) {
+      $results.innerHTML = `⚠️ Please enter a valid <b>Minor/Thru</b>.`;
+      return;
+    }
+    if (!Number.isFinite(angle) || angle <= 0) {
+      $results.innerHTML = `⚠️ Please enter a valid <b>Angle</b>.`;
+      return;
+    }
+    if (!Number.isFinite(thk) || thk <= 0) {
+      $results.innerHTML = `⚠️ Please enter a valid <b>Material Thickness</b>.`;
+      return;
+    }
+
+    // Sanity check: thru hole cannot be bigger than countersink major
+    if (minor > major) {
+  $results.innerHTML = `
+    <div style="margin-bottom:10px;">
+      Status: <span class="badge badge-not">NOT</span>
+    </div>
+    ⚠️ <b>Invalid inputs:</b> Minor/Thru (${minor.toFixed(4)}) is larger than Major (${major.toFixed(4)}).<br/>
+    A countersink <b>Major (CSK OD)</b> must be ≥ the <b>Thru Hole</b>.
+  `;
+  return;
+}
+
+
+    // Excel-matching math
+    const halfAngleRad = (angle / 2) * Math.PI / 180;
+    const minThru = major - (Math.tan(halfAngleRad) * (thk - 0.004)) * 2;
+    const prePunch = major - (major - minor) * 0.75;
+
+    const ok = minor > minThru; // matches your Excel behavior
+
+    $results.innerHTML = `
+      <div style="margin-bottom:10px;">
+        Status: <span class="badge ${ok ? 'badge-ok' : 'badge-not'}">${ok ? 'OK' : 'NOT'}</span>
+      </div>
+
+      <div>Min Thru Hole: <b>${fmt4(minThru)}</b> in</div>
+      <div>Pre-punch: <b>${fmt4(prePunch)}</b> in</div>
+
+      <hr style="border:0;border-top:1px solid #2d2d2d;margin:12px 0;" />
+
+      <div style="color:#bbb;">
+        Rule used: <b>Minor/Thru (${fmt4(minor)})</b> must be &gt; <b>Min Thru Hole (${fmt4(minThru)})</b>
+      </div>
+    `;
+  }
+
+  function reset() {
+    $major.value = '';
+    $minor.value = '';
+    $angle.value = '100';
+    $thk.value = '';
+    $results.innerHTML = `Enter values and click <b>Calculate</b>.`;
+  }
+
+  // Button events
+  $btnCalc.addEventListener('click', compute);
+  $btnReset.addEventListener('click', reset);
+
+  // Convenience: press Enter to calculate
+  [$major, $minor, $angle, $thk].forEach(el => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') compute();
+    });
+  });
+}
+
 
 /* =========================
    LOADERS: Action / Feed / Shipping / Schedule

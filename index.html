@@ -28,7 +28,7 @@
     <section id="view-home" class="view active">
       <div class="home-card">
         <h2 class="home-title">Choose a module</h2>
-        <p class="home-sub">Pick what you want to display. More modules can be added anytime.</p>
+        <p class="home-sub">Pick what you want to display.</p>
 
         <div class="home-buttons">
           <button class="btn btn-big" id="btn-open-action" type="button">New Parts & Projects</button>
@@ -170,7 +170,7 @@
           <h2 class="home-title">Capacity</h2>
           <button class="btn" id="btn-back-capacity" type="button">← Back</button>
         </div>
-        <p class="home-sub">Coming soon. This can be a sheet-based board or a calculated dashboard.</p>
+        <p class="home-sub">Coming soon.</p>
       </div>
     </section>
 
@@ -202,16 +202,21 @@
 </section>
 
 
-    <!-- PLACEHOLDER: CALCULATOR MODULE VIEW -->
-    <section id="view-calculator-module" class="view">
-      <div class="home-card">
-        <div class="submenu-header">
-          <h2 class="home-title" id="calc-module-title">Calculator</h2>
-          <button class="btn" id="btn-back-calc-module" type="button">← Back</button>
-        </div>
-        <p class="home-sub" id="calc-module-sub">Coming soon.</p>
-      </div>
-    </section>
+    <!-- CALCULATOR MODULE VIEW (dynamic content per calculator) -->
+<section id="view-calculator-module" class="view">
+  <div class="home-card calc-card">
+    <div class="submenu-header">
+      <h2 class="home-title" id="calc-module-title">Calculator</h2>
+      <button class="btn" id="btn-back-calc-module" type="button">← Back</button>
+    </div>
+
+    <p class="home-sub" id="calc-module-sub">Select a calculator from the menu.</p>
+
+    <!-- Inject calculator UIs here -->
+    <div id="calc-module-content"></div>
+  </div>
+</section>
+
 
   </main>
 
