@@ -409,17 +409,196 @@ function openCalcModule(name) {
   calcModuleTitle.textContent = `${name} Calculator`;
   calcModuleContent.innerHTML = '';
 
-  if (key === 'COUNTERSINK') {
-    calcModuleSub.textContent = 'Matches the Excel module: Min Thru Hole, Pre-punch, and OK/NOT check.';
-    renderCountersinkCalculator();
-  } else {
-    calcModuleSub.textContent = `Coming soon. We will build an on-screen calculator for ${name}.`;
-    calcModuleContent.innerHTML = `
+  if (key === 'BENDING') {
+  calcModuleSub.textContent = 'Standard bend math: BA, BD, Setback, and Flat Length (1 bend).';
+  renderBendingCalculator();
+
+  /* =========================
+   CALCULATOR: BENDING
+   Standard formulas (inside radius):
+   BA = (π/180)*A*(R + K*T)
+   SB = (R + T)*tan(A/2)
+   BD = 2*SB - BA
+   Flat (1 bend) = L1 + L2 - BD
+   ========================= */
+function renderBendingCalculator() {
+  calcModuleContent.innerHTML = `
+    <div class="calc-grid">
+
+      <!-- INPUTS -->
       <div class="calc-section">
-        <div class="calc-output">No UI yet for ${name}.</div>
+        <h3>Inputs</h3>
+
+        <div class="home-sub" style="margin-bottom:10px;">
+          <b>T</b> = Material thickness (in)<br>
+          <b>R</b> = Inside bend radius (in)<br>
+          <b>A</b> = Bend angle in degrees (e.g., 90)
+        </div>
+
+        <div class="calc-row">
+          <label for="bend-thk">Material Thk, T (in)</label>
+          <input id="bend-thk" type="number" step="0.0001" placeholder="e.g. 0.0480" />
+        </div>
+
+        <div class="calc-row">
+          <label for="bend-rad">Inside Radius, R (in)</label>
+          <input id="bend-rad" type="number" step="0.0001" placeholder="e.g. 0.0625" />
+        </div>
+
+        <div class="calc-row">
+          <label for="bend-ang">Bend Angle, A (deg)</label>
+          <input id="bend-ang" type="number" step="0.1" value="90" />
+        </div>
+
+        <div class="calc-row">
+          <label for="bend-k">K-Factor, K</label>
+          <input id="bend-k" type="number" step="0.01" value="0.343" />
+        </div>
+
+        <hr style="border:0;border-top:1px solid #2d2d2d;margin:12px 0;" />
+
+        <h3 style="margin-top:0;">Flat (1 bend)</h3>
+        <div class="home-sub" style="margin-bottom:10px;">
+          Enter flange outside lengths (optional).<br>
+          Flat = L1 + L2 − BD
+        </div>
+
+        <div class="calc-row">
+          <label for="bend-l1">Flange L1 (in)</label>
+          <input id="bend-l1" type="number" step="0.0001" placeholder="e.g. 1.2500" />
+        </div>
+
+        <div class="calc-row">
+          <label for="bend-l2">Flange L2 (in)</label>
+          <input id="bend-l2" type="number" step="0.0001" placeholder="e.g. 0.7500" />
+        </div>
+
+        <div class="calc-actions">
+          <button class="btn" id="bend-btn-calc" type="button">Calculate</button>
+          <button class="btn" id="bend-btn-reset" type="button">Reset</button>
+        </div>
+
+        <div class="home-sub" style="margin-top:10px;">
+          Notes: Default K = <b>0.343</b>. This is the standard we use in TPI, but K can vary based on material and tooling. 
+          For critical bends, please refer to your material's bend charts or do test bends.
+        </div>
+      </div>
+
+      <!-- OUTPUTS -->
+      <div class="calc-section">
+        <h3>Outputs</h3>
+
+        <div class="calc-output" id="bend-results">
+          Enter values and click <b>Calculate</b>.
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  const $t  = document.getElementById('bend-thk');
+  const $r  = document.getElementById('bend-rad');
+  const $a  = document.getElementById('bend-ang');
+  const $k  = document.getElementById('bend-k');
+  const $l1 = document.getElementById('bend-l1');
+  const $l2 = document.getElementById('bend-l2');
+
+  const $btnCalc = document.getElementById('bend-btn-calc');
+  const $btnReset = document.getElementById('bend-btn-reset');
+  const $results = document.getElementById('bend-results');
+
+  const n = v => {
+    const num = Number(v);
+    return Number.isFinite(num) ? num : NaN;
+  };
+
+  const fmt4 = x => (Number.isFinite(x) ? x.toFixed(4) : '—');
+
+  function compute() {
+    const T = n($t.value);
+    const R = n($r.value);
+    const Adeg = n($a.value);
+    const K = n($k.value);
+
+    if (!Number.isFinite(T) || T <= 0) {
+      $results.innerHTML = `⚠️ Please enter a valid <b>Thickness (T)</b>.`;
+      return;
+    }
+    if (!Number.isFinite(R) || R < 0) {
+      $results.innerHTML = `⚠️ Please enter a valid <b>Inside Radius (R)</b>.`;
+      return;
+    }
+    if (!Number.isFinite(Adeg) || Adeg <= 0 || Adeg >= 179.9) {
+      $results.innerHTML = `⚠️ Please enter a valid <b>Angle (A)</b> between 0 and 180 degrees.`;
+      return;
+    }
+    if (!Number.isFinite(K) || K <= 0 || K >= 1) {
+      $results.innerHTML = `⚠️ Please enter a valid <b>K-Factor</b> (typical: 0.30–0.45).`;
+      return;
+    }
+
+    const Arad = (Math.PI / 180) * Adeg;
+
+    // Standard bending calculations
+    const BA = Arad * (R + K * T);
+    const SB = (R + T) * Math.tan(Arad / 2);
+    const BD = 2 * SB - BA;
+
+    // Flat (optional)
+    const L1 = n($l1.value);
+    const L2 = n($l2.value);
+    const hasFlat = Number.isFinite(L1) && L1 > 0 && Number.isFinite(L2) && L2 > 0;
+    const Flat = hasFlat ? (L1 + L2 - BD) : NaN;
+
+    $results.innerHTML = `
+      <div>Bend Allowance (BA): <b>${fmt4(BA)}</b> in</div>
+      <div>Bend Deduction (BD): <b>${fmt4(BD)}</b> in</div>
+      <div>Setback (SB): <b>${fmt4(SB)}</b> in</div>
+
+      <hr style="border:0;border-top:1px solid #2d2d2d;margin:12px 0;" />
+
+      <div>Flat Length (1 bend): <b>${hasFlat ? fmt4(Flat) : '—'}</b> in</div>
+      <div style="color:#bbb;margin-top:6px;">
+        ${hasFlat ? `Flat = L1 (${fmt4(L1)}) + L2 (${fmt4(L2)}) − BD (${fmt4(BD)})`
+                  : `Enter L1 and L2 to calculate flat length.`}
       </div>
     `;
   }
+
+  function reset() {
+    $t.value = '';
+    $r.value = '';
+    $a.value = '90';
+    $k.value = '0.33';
+    $l1.value = '';
+    $l2.value = '';
+    $results.innerHTML = `Enter values and click <b>Calculate</b>.`;
+  }
+
+  $btnCalc.addEventListener('click', compute);
+  $btnReset.addEventListener('click', reset);
+
+  // Enter to calculate
+  [$t, $r, $a, $k, $l1, $l2].forEach(el => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') compute();
+    });
+  });
+}
+
+} else if (key === 'COUNTERSINK') {
+  calcModuleSub.textContent = 'Matches my Excel module: Min Thru Hole, Pre-punch, and OK/NOT check.';
+  renderCountersinkCalculator();
+
+} else {
+  calcModuleSub.textContent = `Coming soon. ${name}.`;
+  calcModuleContent.innerHTML = `
+    <div class="calc-section">
+      <div class="calc-output">No UI yet for ${name}.</div>
+    </div>
+  `;
+}
+
 
   setView('calcModule');
 }
