@@ -529,7 +529,7 @@ function renderBendingCalculator() {
           <div id="bend-multi-inputs" style="margin-top:10px;"></div>
 
           <div class="home-sub" style="margin-top:10px;">
-            Notes: This starts with global T, R, K for all bends. If you want per-bend R/K later, we can add it.
+            Notes: My formula states a global T, R, K for all bends. No Radius or KFactor per bend yet.
           </div>
         </div>
 

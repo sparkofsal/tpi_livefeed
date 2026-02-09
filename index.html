@@ -174,49 +174,47 @@
       </div>
     </section>
 
-<!-- SCHEDULE MODULE (TABLE VIEW) -->
-<section id="view-schedule-module" class="view">
-  <div class="panel" id="panel-schedule">
-    <div class="panel-title panel-title-grid schedule-title-grid">
-      <div class="panel-title-left">
-        <h2 class="home-title" id="schedule-module-title">Schedule</h2>
-        <div id="schedule-count" class="panel-sub">—</div>
+    <!-- SCHEDULE MODULE (TABLE VIEW) -->
+    <section id="view-schedule-module" class="view">
+      <div class="panel" id="panel-schedule">
+        <div class="panel-title panel-title-grid schedule-title-grid">
+          <div class="panel-title-left">
+            <h2 class="home-title" id="schedule-module-title">Schedule</h2>
+            <div id="schedule-count" class="panel-sub">—</div>
+          </div>
+
+          <div class="schedule-note" id="schedule-module-sub">
+            Filtered by Machine (Column N)
+          </div>
+
+          <div class="panel-actions">
+            <button class="btn" id="btn-back-schedule-module" type="button">← Back</button>
+          </div>
+        </div>
+
+        <div class="table-container no-scrollbar schedule-height" id="schedule-container">
+          <table>
+            <thead><tr id="schedule-headers"></tr></thead>
+            <tbody id="schedule-body"></tbody>
+          </table>
+        </div>
       </div>
-
-      <div class="schedule-note" id="schedule-module-sub">
-        Filtered by Machine (Column N)
-      </div>
-
-      <div class="panel-actions">
-        <button class="btn" id="btn-back-schedule-module" type="button">← Back</button>
-      </div>
-    </div>
-
-    <div class="table-container no-scrollbar schedule-height" id="schedule-container">
-      <table>
-        <thead><tr id="schedule-headers"></tr></thead>
-        <tbody id="schedule-body"></tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
+    </section>
 
     <!-- CALCULATOR MODULE VIEW (dynamic content per calculator) -->
-<section id="view-calculator-module" class="view">
-  <div class="home-card calc-card">
-    <div class="submenu-header">
-      <h2 class="home-title" id="calc-module-title">Calculator</h2>
-      <button class="btn" id="btn-back-calc-module" type="button">← Back</button>
-    </div>
+    <section id="view-calculator-module" class="view">
+      <div class="home-card calc-card">
+        <div class="submenu-header">
+          <h2 class="home-title" id="calc-module-title">Calculator</h2>
+          <button class="btn" id="btn-back-calc-module" type="button">← Back</button>
+        </div>
 
-    <p class="home-sub" id="calc-module-sub">Select a calculator from the menu.</p>
+        <p class="home-sub" id="calc-module-sub">Select a calculator from the menu.</p>
 
-    <!-- Inject calculator UIs here -->
-    <div id="calc-module-content"></div>
-  </div>
-</section>
-
+        <!-- Inject calculator UIs here -->
+        <div id="calc-module-content"></div>
+      </div>
+    </section>
 
   </main>
 

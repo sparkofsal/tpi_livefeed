@@ -216,6 +216,7 @@ td.needed-red {
   background: rgba(0,0,0,0.18);
   white-space: nowrap;
 }
+
 /* ===== SCHEDULE MODULE TABLE ===== */
 .schedule-height { max-height: 78vh; }
 
@@ -279,7 +280,6 @@ td.status-complete {
   color: #ffffff;
 }
 
-
 /* ===== MOBILE ===== */
 @media (max-width: 700px) {
   body { padding: 1rem; }
@@ -315,6 +315,9 @@ td.status-complete {
   border-radius: 12px;
   padding: 14px;
   background: rgba(0,0,0,0.18);
+
+  /* small readability bump (doesn't affect tables) */
+  font-size: 1.02rem;
 }
 
 .calc-section h3 {
@@ -345,6 +348,14 @@ td.status-complete {
   font-size: 1rem;
 }
 
+/* nicer focus for operators / TV */
+.calc-row input:focus,
+.calc-mini-input:focus {
+  outline: none;
+  border-color: #666;
+  box-shadow: 0 0 0 2px rgba(180, 180, 180, 0.18);
+}
+
 .calc-actions {
   display: flex;
   gap: 10px;
@@ -352,9 +363,15 @@ td.status-complete {
   margin-top: 10px;
 }
 
+/* make results feel like a "result box" */
 .calc-output {
   font-size: 1.05rem;
   line-height: 1.45;
+
+  border: 1px solid #2d2d2d;
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(0,0,0,0.22);
 }
 
 .badge {
@@ -401,8 +418,13 @@ td.status-complete {
   font-weight: 800;
 }
 
+.btn-toggle:hover {
+  opacity: 0.9;
+}
+
 .btn-toggle.active {
-  outline: 2px solid #555;
+  border-color: #666;
+  box-shadow: 0 0 0 2px rgba(180, 180, 180, 0.18);
 }
 
 .calc-mini-table {
@@ -421,6 +443,12 @@ td.status-complete {
 
 .calc-mini-table th {
   background: #151517;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+}
+
+.calc-mini-table td label {
+  font-size: 0.85rem;
 }
 
 .calc-mini-input {
