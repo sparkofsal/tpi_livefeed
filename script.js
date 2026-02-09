@@ -397,7 +397,7 @@ document.getElementById('btn-open-sched-vaski').addEventListener('click', () => 
 document.getElementById('btn-open-sched-program').addEventListener('click', () => openScheduleModule('Program'));
 
 /* =========================
-   CALCULATORS (placeholders)
+   CALCULATORS
    ========================= */
 document.getElementById('btn-open-calc-bending').addEventListener('click', () => openCalcModule('Bending'));
 document.getElementById('btn-open-calc-countersink').addEventListener('click', () => openCalcModule('Countersink'));
@@ -410,16 +410,38 @@ function openCalcModule(name) {
   calcModuleContent.innerHTML = '';
 
   if (key === 'BENDING') {
-  calcModuleSub.textContent = 'Standard bend math: BA, BD, Setback, and Flat Length (1 bend).';
-  renderBendingCalculator();
+    calcModuleSub.textContent = 'Standard bend math: BA, BD, Setback, and Flat dimension (1 bend) + Multi-bend flat.';
+    renderBendingCalculator();
 
-  /* =========================
+  } else if (key === 'COUNTERSINK') {
+    calcModuleSub.textContent = 'Matches my Excel module: Min Thru Hole, Pre-punch, and OK/NOT check.';
+    renderCountersinkCalculator();
+
+  } else {
+    calcModuleSub.textContent = `Coming soon. ${name}.`;
+    calcModuleContent.innerHTML = `
+      <div class="calc-section">
+        <div class="calc-output">No UI yet for ${name}.</div>
+      </div>
+    `;
+  }
+
+  setView('calcModule');
+}
+
+
+/* =========================
    CALCULATOR: BENDING
    Standard formulas (inside radius):
    BA = (π/180)*A*(R + K*T)
    SB = (R + T)*tan(A/2)
    BD = 2*SB - BA
-   Flat (1 bend) = L1 + L2 - BD
+
+   Single-bend flat (outside dims):
+   Flat = L1 + L2 - BD
+
+   Multi-bend flat (outside dims):
+   Flat = (sum of outside dimensions) - (sum of BD for each bend)
    ========================= */
 function renderBendingCalculator() {
   calcModuleContent.innerHTML = `
@@ -432,9 +454,17 @@ function renderBendingCalculator() {
         <div class="home-sub" style="margin-bottom:10px;">
           <b>T</b> = Material thickness (in)<br>
           <b>R</b> = Inside bend radius (in)<br>
-          <b>A</b> = Bend angle in degrees (e.g., 90)
+          <b>A</b> = Bend angle in degrees (e.g., 90)<br>
+          <b>K</b> = K-factor (TPI standard: 0.434)
         </div>
 
+        <!-- Toggle: Single vs Multi -->
+        <div class="calc-toggle">
+          <button class="btn-toggle active" id="bend-mode-single" type="button">Single Bend</button>
+          <button class="btn-toggle" id="bend-mode-multi" type="button">Multi Bend</button>
+        </div>
+
+        <!-- Global defaults used for both modes -->
         <div class="calc-row">
           <label for="bend-thk">Material Thk, T (in)</label>
           <input id="bend-thk" type="number" step="0.0001" placeholder="e.g. 0.0480" />
@@ -446,48 +476,78 @@ function renderBendingCalculator() {
         </div>
 
         <div class="calc-row">
-          <label for="bend-ang">Bend Angle, A (deg)</label>
-          <input id="bend-ang" type="number" step="0.1" value="90" />
-        </div>
-
-        <div class="calc-row">
           <label for="bend-k">K-Factor, K</label>
-          <input id="bend-k" type="number" step="0.01" value="0.343" />
+          <input id="bend-k" type="number" step="0.001" value="0.434" />
         </div>
 
         <hr style="border:0;border-top:1px solid #2d2d2d;margin:12px 0;" />
 
-        <h3 style="margin-top:0;">Flat (1 bend)</h3>
-        <div class="home-sub" style="margin-bottom:10px;">
-          Enter flange outside lengths (optional).<br>
-          Flat = L1 + L2 − BD
+        <!-- SINGLE BEND BLOCK -->
+        <div id="bend-block-single">
+          <h3 style="margin-top:0;">Single Bend</h3>
+
+          <div class="calc-row">
+            <label for="bend-ang">Bend Angle, A (deg)</label>
+            <input id="bend-ang" type="number" step="0.1" value="90" />
+          </div>
+
+          <h3 style="margin-top:0;">Flat (1 bend)</h3>
+          <div class="home-sub" style="margin-bottom:10px;">
+            Enter outside flange dimensions (optional).<br>
+            Flat = L1 + L2 − BD
+          </div>
+
+          <div class="calc-row">
+            <label for="bend-l1">Flange L1 (in)</label>
+            <input id="bend-l1" type="number" step="0.0001" placeholder="e.g. 1.2500" />
+          </div>
+
+          <div class="calc-row">
+            <label for="bend-l2">Flange L2 (in)</label>
+            <input id="bend-l2" type="number" step="0.0001" placeholder="e.g. 0.7500" />
+          </div>
         </div>
 
-        <div class="calc-row">
-          <label for="bend-l1">Flange L1 (in)</label>
-          <input id="bend-l1" type="number" step="0.0001" placeholder="e.g. 1.2500" />
+        <!-- MULTI BEND BLOCK -->
+        <div id="bend-block-multi" style="display:none;">
+          <h3 style="margin-top:0;">Multi Bend (outside dims)</h3>
+
+          <div class="home-sub" style="margin-bottom:10px;">
+            Use this when the part has multiple bends.<br>
+            Flat = (sum of outside dimensions) − (sum of BD for each bend)
+          </div>
+
+          <div class="calc-row">
+            <label for="bend-multi-count">Number of bends</label>
+            <input id="bend-multi-count" type="number" step="1" value="2" />
+          </div>
+
+          <div class="calc-actions">
+            <button class="btn" id="bend-multi-build" type="button">Build Inputs</button>
+          </div>
+
+          <div id="bend-multi-inputs" style="margin-top:10px;"></div>
+
+          <div class="home-sub" style="margin-top:10px;">
+            Notes: This starts with global T, R, K for all bends. If you want per-bend R/K later, we can add it.
+          </div>
         </div>
 
-        <div class="calc-row">
-          <label for="bend-l2">Flange L2 (in)</label>
-          <input id="bend-l2" type="number" step="0.0001" placeholder="e.g. 0.7500" />
-        </div>
-
-        <div class="calc-actions">
+        <div class="calc-actions" style="margin-top:14px;">
           <button class="btn" id="bend-btn-calc" type="button">Calculate</button>
           <button class="btn" id="bend-btn-reset" type="button">Reset</button>
         </div>
 
         <div class="home-sub" style="margin-top:10px;">
-          Notes: Default K = <b>0.343</b>. This is the standard we use in TPI, but K can vary based on material and tooling. 
-          For critical bends, please refer to your material's bend charts or do test bends.
+          For 90° bends, this aligns with our shop standard:
+          <b>3 × Thickness + Radius × K</b>.<br>
+          For critical bends/materials, verify with bend charts or test bends.
         </div>
       </div>
 
       <!-- OUTPUTS -->
       <div class="calc-section">
         <h3>Outputs</h3>
-
         <div class="calc-output" id="bend-results">
           Enter values and click <b>Calculate</b>.
         </div>
@@ -496,55 +556,154 @@ function renderBendingCalculator() {
     </div>
   `;
 
-  const $t  = document.getElementById('bend-thk');
-  const $r  = document.getElementById('bend-rad');
-  const $a  = document.getElementById('bend-ang');
-  const $k  = document.getElementById('bend-k');
+  // ===== DOM refs =====
+  const $modeSingle = document.getElementById('bend-mode-single');
+  const $modeMulti = document.getElementById('bend-mode-multi');
+
+  const $blockSingle = document.getElementById('bend-block-single');
+  const $blockMulti = document.getElementById('bend-block-multi');
+
+  const $t = document.getElementById('bend-thk');
+  const $r = document.getElementById('bend-rad');
+  const $k = document.getElementById('bend-k');
+
+  const $a = document.getElementById('bend-ang');
   const $l1 = document.getElementById('bend-l1');
   const $l2 = document.getElementById('bend-l2');
+
+  const $multiCount = document.getElementById('bend-multi-count');
+  const $multiBuild = document.getElementById('bend-multi-build');
+  const $multiInputs = document.getElementById('bend-multi-inputs');
 
   const $btnCalc = document.getElementById('bend-btn-calc');
   const $btnReset = document.getElementById('bend-btn-reset');
   const $results = document.getElementById('bend-results');
 
-  const n = v => {
+  // ===== state =====
+  let bendMode = 'single';
+
+  // ===== helpers =====
+  const n = (v) => {
     const num = Number(v);
     return Number.isFinite(num) ? num : NaN;
   };
+  const fmt4 = (x) => (Number.isFinite(x) ? x.toFixed(4) : '—');
 
-  const fmt4 = x => (Number.isFinite(x) ? x.toFixed(4) : '—');
-
-  function compute() {
+  function validateGlobals() {
     const T = n($t.value);
     const R = n($r.value);
-    const Adeg = n($a.value);
     const K = n($k.value);
 
-    if (!Number.isFinite(T) || T <= 0) {
-      $results.innerHTML = `⚠️ Please enter a valid <b>Thickness (T)</b>.`;
-      return;
+    if (!Number.isFinite(T) || T <= 0) return { ok: false, msg: '⚠️ Please enter a valid <b>Thickness (T)</b>.' };
+    if (!Number.isFinite(R) || R < 0) return { ok: false, msg: '⚠️ Please enter a valid <b>Inside Radius (R)</b>.' };
+    if (!Number.isFinite(K) || K <= 0 || K >= 1) return { ok: false, msg: '⚠️ Please enter a valid <b>K-Factor</b> (typical: 0.30–0.50).' };
+
+    return { ok: true, T, R, K };
+  }
+
+  function calcBendMetrics({ T, R, K, Adeg }) {
+    const Arad = (Math.PI / 180) * Adeg;
+    const BA = Arad * (R + K * T);
+    const SB = (R + T) * Math.tan(Arad / 2);
+    const BD = 2 * SB - BA;
+    return { BA, SB, BD };
+  }
+
+  // ===== mode switching =====
+  function setMode(next) {
+    bendMode = next;
+
+    if (bendMode === 'single') {
+      $modeSingle.classList.add('active');
+      $modeMulti.classList.remove('active');
+      $blockSingle.style.display = 'block';
+      $blockMulti.style.display = 'none';
+    } else {
+      $modeMulti.classList.add('active');
+      $modeSingle.classList.remove('active');
+      $blockSingle.style.display = 'none';
+      $blockMulti.style.display = 'block';
     }
-    if (!Number.isFinite(R) || R < 0) {
-      $results.innerHTML = `⚠️ Please enter a valid <b>Inside Radius (R)</b>.`;
-      return;
+
+    $results.innerHTML = `Enter values and click <b>Calculate</b>.`;
+  }
+
+  $modeSingle.addEventListener('click', () => setMode('single'));
+  $modeMulti.addEventListener('click', () => setMode('multi'));
+
+  // ===== multi input builder =====
+  function buildMultiInputs() {
+    const count = Math.max(1, Math.min(20, Math.floor(n($multiCount.value) || 1)));
+    const segCount = count + 1;
+
+    let html = `
+      <div class="home-sub" style="margin-bottom:8px;">
+        Enter each bend angle and each outside dimension.
+      </div>
+
+      <table class="calc-mini-table">
+        <thead>
+          <tr>
+            <th style="width:50%;">Bend Angles (deg)</th>
+            <th style="width:50%;">Outside Dimensions (in)</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    const rows = Math.max(count, segCount);
+    for (let i = 1; i <= rows; i++) {
+      html += `<tr>`;
+
+      if (i <= count) {
+        html += `
+          <td>
+            <label style="display:block;color:#bbb;font-weight:800;margin-bottom:6px;">A${i}</label>
+            <input class="calc-mini-input" id="bend-a-${i}" type="number" step="0.1" value="90" />
+          </td>
+        `;
+      } else {
+        html += `<td></td>`;
+      }
+
+      if (i <= segCount) {
+        html += `
+          <td>
+            <label style="display:block;color:#bbb;font-weight:800;margin-bottom:6px;">L${i}</label>
+            <input class="calc-mini-input" id="bend-l-${i}" type="number" step="0.0001" placeholder="e.g. 1.2500" />
+          </td>
+        `;
+      } else {
+        html += `<td></td>`;
+      }
+
+      html += `</tr>`;
     }
+
+    html += `
+        </tbody>
+      </table>
+    `;
+
+    $multiInputs.innerHTML = html;
+  }
+
+  $multiBuild.addEventListener('click', buildMultiInputs);
+  buildMultiInputs();
+
+  // ===== compute =====
+  function computeSingle() {
+    const g = validateGlobals();
+    if (!g.ok) { $results.innerHTML = g.msg; return; }
+
+    const Adeg = n($a.value);
     if (!Number.isFinite(Adeg) || Adeg <= 0 || Adeg >= 179.9) {
       $results.innerHTML = `⚠️ Please enter a valid <b>Angle (A)</b> between 0 and 180 degrees.`;
       return;
     }
-    if (!Number.isFinite(K) || K <= 0 || K >= 1) {
-      $results.innerHTML = `⚠️ Please enter a valid <b>K-Factor</b> (typical: 0.30–0.45).`;
-      return;
-    }
 
-    const Arad = (Math.PI / 180) * Adeg;
+    const { BA, SB, BD } = calcBendMetrics({ ...g, Adeg });
 
-    // Standard bending calculations
-    const BA = Arad * (R + K * T);
-    const SB = (R + T) * Math.tan(Arad / 2);
-    const BD = 2 * SB - BA;
-
-    // Flat (optional)
     const L1 = n($l1.value);
     const L2 = n($l2.value);
     const hasFlat = Number.isFinite(L1) && L1 > 0 && Number.isFinite(L2) && L2 > 0;
@@ -557,51 +716,104 @@ function renderBendingCalculator() {
 
       <hr style="border:0;border-top:1px solid #2d2d2d;margin:12px 0;" />
 
-      <div>Flat Length (1 bend): <b>${hasFlat ? fmt4(Flat) : '—'}</b> in</div>
+      <div>Flat dimension (1 bend): <b>${hasFlat ? fmt4(Flat) : '—'}</b> in</div>
       <div style="color:#bbb;margin-top:6px;">
         ${hasFlat ? `Flat = L1 (${fmt4(L1)}) + L2 (${fmt4(L2)}) − BD (${fmt4(BD)})`
-                  : `Enter L1 and L2 to calculate flat length.`}
+                  : `Enter L1 and L2 to calculate flat dimension.`}
       </div>
     `;
+  }
+
+  function computeMulti() {
+    const g = validateGlobals();
+    if (!g.ok) { $results.innerHTML = g.msg; return; }
+
+    const bendCount = Math.max(1, Math.min(20, Math.floor(n($multiCount.value) || 1)));
+    const segCount = bendCount + 1;
+
+    const angles = [];
+    for (let i = 1; i <= bendCount; i++) {
+      const el = document.getElementById(`bend-a-${i}`);
+      const Adeg = n(el?.value);
+      if (!Number.isFinite(Adeg) || Adeg <= 0 || Adeg >= 179.9) {
+        $results.innerHTML = `⚠️ Invalid angle at <b>A${i}</b>. Use a value between 0 and 180 degrees.`;
+        return;
+      }
+      angles.push(Adeg);
+    }
+
+    const segs = [];
+    for (let i = 1; i <= segCount; i++) {
+      const el = document.getElementById(`bend-l-${i}`);
+      const L = n(el?.value);
+      if (!Number.isFinite(L) || L <= 0) {
+        $results.innerHTML = `⚠️ Please enter a valid outside dimension at <b>L${i}</b>.`;
+        return;
+      }
+      segs.push(L);
+    }
+
+    let totalBA = 0;
+    let totalBD = 0;
+
+    angles.forEach((Adeg) => {
+      const { BA, BD } = calcBendMetrics({ ...g, Adeg });
+      totalBA += BA;
+      totalBD += BD;
+    });
+
+    const sumSegs = segs.reduce((a, b) => a + b, 0);
+    const Flat = sumSegs - totalBD;
+
+    $results.innerHTML = `
+      <div>Multi Bend Summary</div>
+      <div style="margin-top:8px;">Total Bend Allowance (Sum of BA): <b>${fmt4(totalBA)}</b> in</div>
+      <div>Total Bend Deduction (Sum of BD): <b>${fmt4(totalBD)}</b> in</div>
+
+      <hr style="border:0;border-top:1px solid #2d2d2d;margin:12px 0;" />
+
+      <div>Sum Outside Dimensions (Total sum of L): <b>${fmt4(sumSegs)}</b> in</div>
+      <div>Flat dimension: <b>${fmt4(Flat)}</b> in</div>
+
+      <div style="color:#bbb;margin-top:8px;">
+        Flat = (Total sum of L) − (Total sum of BD)
+      </div>
+    `;
+  }
+
+  function compute() {
+    if (bendMode === 'single') computeSingle();
+    else computeMulti();
   }
 
   function reset() {
     $t.value = '';
     $r.value = '';
+    $k.value = '0.434';
+
     $a.value = '90';
-    $k.value = '0.33';
     $l1.value = '';
     $l2.value = '';
+
+    $multiCount.value = '2';
+    buildMultiInputs();
+
     $results.innerHTML = `Enter values and click <b>Calculate</b>.`;
+    setMode('single');
   }
 
   $btnCalc.addEventListener('click', compute);
   $btnReset.addEventListener('click', reset);
 
-  // Enter to calculate
-  [$t, $r, $a, $k, $l1, $l2].forEach(el => {
+  // Enter key calculates
+  [$t, $r, $k, $a, $l1, $l2].forEach(el => {
     el.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') compute();
     });
   });
 }
 
-} else if (key === 'COUNTERSINK') {
-  calcModuleSub.textContent = 'Matches my Excel module: Min Thru Hole, Pre-punch, and OK/NOT check.';
-  renderCountersinkCalculator();
 
-} else {
-  calcModuleSub.textContent = `Coming soon. ${name}.`;
-  calcModuleContent.innerHTML = `
-    <div class="calc-section">
-      <div class="calc-output">No UI yet for ${name}.</div>
-    </div>
-  `;
-}
-
-
-  setView('calcModule');
-}
 /* =========================
    CALCULATOR: COUNTERSINK (Excel-matching)
    Excel formulas:
@@ -713,16 +925,15 @@ function renderCountersinkCalculator() {
 
     // Sanity check: thru hole cannot be bigger than countersink major
     if (minor > major) {
-  $results.innerHTML = `
-    <div style="margin-bottom:10px;">
-      Status: <span class="badge badge-not">NOT</span>
-    </div>
-    ⚠️ <b>Invalid inputs:</b> Minor/Thru (${minor.toFixed(4)}) is larger than Major (${major.toFixed(4)}).<br/>
-    A countersink <b>Major (CSK OD)</b> must be ≥ the <b>Thru Hole</b>.
-  `;
-  return;
-}
-
+      $results.innerHTML = `
+        <div style="margin-bottom:10px;">
+          Status: <span class="badge badge-not">NOT</span>
+        </div>
+        ⚠️ <b>Invalid inputs:</b> Minor/Thru (${minor.toFixed(4)}) is larger than Major (${major.toFixed(4)}).<br/>
+        A countersink <b>Major (CSK OD)</b> must be ≥ the <b>Thru Hole</b>.
+      `;
+      return;
+    }
 
     // Excel-matching math
     const halfAngleRad = (angle / 2) * Math.PI / 180;
@@ -797,7 +1008,7 @@ async function loadActionOnly() {
       if (na !== nb) return na - nb;
 
       const ta = a.c?.[0]?.v ? parseAnyDateMs(a.c[0].v) : 0;
-      const tb = b.c?.[0]?.v ? parseAnyDateMs(b.c[0].v) : 0;
+      const tb = b.c?.[0]?.v ? parseAnyDateMs(a.c[0].v) : 0;
       return ta - tb;
     });
 

@@ -381,3 +381,54 @@ td.status-complete {
   .calc-row { grid-template-columns: 1fr; }
 }
 
+/* =========================
+   BENDING: Multi-bend helpers
+   ========================= */
+.calc-toggle {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0 12px 0;
+}
+
+.btn-toggle {
+  padding: 10px 14px;
+  border: 1px solid #333;
+  border-radius: 10px;
+  background: #141414;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.btn-toggle.active {
+  outline: 2px solid #555;
+}
+
+.calc-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.calc-mini-table th,
+.calc-mini-table td {
+  border: 1px solid #2d2d2d;
+  padding: 8px;
+  font-size: 0.95rem;
+  vertical-align: top;
+}
+
+.calc-mini-table th {
+  background: #151517;
+}
+
+.calc-mini-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #111;
+  color: #fff;
+  font-size: 1rem;
+}
