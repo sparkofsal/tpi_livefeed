@@ -460,3 +460,36 @@ td.status-complete {
   color: #fff;
   font-size: 1rem;
 }
+
+/* ===== SHIPPING: small readability helpers (SAFE) ===== */
+
+/* Make shipping rows slightly easier to scan */
+#panel-shipping tbody tr:nth-child(even) td {
+  background: rgba(255,255,255,0.03);
+}
+
+/* If your SHIP DATE column exists, it’s usually better centered */
+#panel-shipping td.ship-date {
+  text-align: center;
+  font-weight: 800;
+}
+/* =========================
+   SHIPPING TABLE FIX
+   Prevent vertical letters + allow horizontal scroll
+   ========================= */
+#shipping-container {
+  overflow-x: auto;              /* allow sideways scroll */
+  -webkit-overflow-scrolling: touch;
+}
+
+#shipping-container table {
+  table-layout: auto;            /* don't force tiny fixed columns */
+  min-width: 1400px;             /* gives columns breathing room */
+}
+
+#shipping-container th,
+#shipping-container td {
+  white-space: nowrap;           /* keep PO #, Job #, etc on one line */
+  word-break: normal;            /* stop breaking every character */
+  overflow-wrap: normal;         /* override "anywhere" */
+}
