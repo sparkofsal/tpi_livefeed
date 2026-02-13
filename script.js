@@ -127,6 +127,66 @@ document.getElementById('btn-new-parts').href = FORM_URL_NEW_PARTS;
 const normalize = v => String(v ?? '').trim().toUpperCase();
 const cellVal = c => c?.v ?? '';
 
+// ✅ Use formatted value when Google provides it (GViz uses .f for pretty display)
+const cellDisplay = c => (c?.f ?? c?.v ?? '');
+
+// ✅ Extract first date from text like "shipping 2/12-2/20" or "2/13"
+function extractFirstDateMs(text, fallbackYear) {
+  const s = String(text ?? '');
+  // matches: 2/13, 02/13, 2-13, 2/13/2026, etc.
+  const m = s.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  if (!m) return Infinity;
+
+  const mm = Number(m[1]);
+  const dd = Number(m[2]);
+  let yy = m[3] ? Number(m[3]) : Number(fallbackYear);
+
+  if (!Number.isFinite(mm) || !Number.isFinite(dd)) return Infinity;
+  if (!Number.isFinite(yy)) yy = new Date().getFullYear();
+  if (yy < 100) yy = 2000 + yy; // handle 26 -> 2026
+
+  const dt = new Date(yy, mm - 1, dd);
+  const ms = dt.getTime();
+  return Number.isFinite(ms) ? ms : Infinity;
+}
+
+// ✅ Ship date can be a real date OR text notes. This returns a sortable/filterable ms.
+function shipCellToMs(shipCell, dueCellForYear) {
+  // First: try "real" date value (works for Date(yyyy,mm,dd) and normal date strings)
+  const raw = cellVal(shipCell);
+  const ms1 = parseAnyDateMs(raw);
+  if (Number.isFinite(ms1) && ms1 !== Infinity) return ms1;
+
+  // Second: try formatted display (often "2/13/2026")
+  const disp = cellDisplay(shipCell);
+  const ms2 = parseAnyDateMs(disp);
+  if (Number.isFinite(ms2) && ms2 !== Infinity) return ms2;
+
+  // Third: parse first date inside text like "shipping 2/12-2/20"
+  const dueMs = parseAnyDateMs(cellVal(dueCellForYear));
+  const fallbackYear = Number.isFinite(dueMs) && dueMs !== Infinity
+    ? new Date(dueMs).getFullYear()
+    : new Date().getFullYear();
+
+  return extractFirstDateMs(disp, fallbackYear);
+}
+
+// ✅ What we SHOW in the SHIP DATE column:
+// - if it’s a real date → show mm/dd/yyyy
+// - if it’s text → show exactly the text
+function formatShipDisplay(shipCell) {
+  const raw = cellVal(shipCell);
+  const ms = parseAnyDateMs(raw);
+  if (Number.isFinite(ms) && ms !== Infinity) return new Date(ms).toLocaleDateString();
+
+  const disp = cellDisplay(shipCell);
+  const ms2 = parseAnyDateMs(disp);
+  if (Number.isFinite(ms2) && ms2 !== Infinity) return new Date(ms2).toLocaleDateString();
+
+  return String(disp ?? '');
+}
+
+
 function statusRank(v) {
   const s = normalize(v);
   if (s === 'OPEN') return 0;
@@ -275,6 +335,17 @@ function ensureShippingFilterBar() {
         <input id="ship-filter-to" type="date" class="btn" />
       </div>
 
+      <!-- ✅ NEW: Ship Date range -->
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <label style="color:#bbb; font-weight:800; font-size:0.85rem;">Ship Date From</label>
+        <input id="ship-filter-ship-from" type="date" class="btn" />
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <label style="color:#bbb; font-weight:800; font-size:0.85rem;">Ship Date To</label>
+        <input id="ship-filter-ship-to" type="date" class="btn" />
+      </div>
+
       <div style="display:flex; gap:10px; align-items:center; padding-bottom:2px;">
         <label style="display:flex; gap:8px; align-items:center; color:#ddd; font-weight:800;">
           <input id="ship-filter-openonly" type="checkbox" />
@@ -292,22 +363,34 @@ function ensureShippingFilterBar() {
   // Insert after title bar
   title.insertAdjacentElement('afterend', bar);
 
+  // ===== DOM refs =====
   const $customer = document.getElementById('ship-filter-customer');
   const $type = document.getElementById('ship-filter-type');
   const $search = document.getElementById('ship-filter-search');
   const $from = document.getElementById('ship-filter-from');
   const $to = document.getElementById('ship-filter-to');
+
+  // ✅ NEW ship date refs
+  const $shipFrom = document.getElementById('ship-filter-ship-from');
+  const $shipTo = document.getElementById('ship-filter-ship-to');
+
   const $open = document.getElementById('ship-filter-openonly');
   const $clear = document.getElementById('ship-filter-clear');
 
-  shippingFilterEls = { $customer, $type, $search, $from, $to, $open, $clear };
+  // ✅ Store all refs in one place
+  shippingFilterEls = { $customer, $type, $search, $from, $to, $shipFrom, $shipTo, $open, $clear };
 
-  // Restore saved state (per device)
+  // ===== Restore saved state (per device) =====
   const saved = loadShippingFiltersFromStorage();
   if (saved) {
     $search.value = saved.search ?? '';
     $from.value = saved.from ?? '';
     $to.value = saved.to ?? '';
+
+    // ✅ NEW: restore ship date range
+    $shipFrom.value = saved.shipFrom ?? '';
+    $shipTo.value = saved.shipTo ?? '';
+
     $open.checked = !!saved.openOnly;
     // customer/type restored after dropdowns are populated
   }
@@ -318,24 +401,39 @@ function ensureShippingFilterBar() {
     renderShippingFiltered(); // rerender only shipping rows
   }
 
+  // ===== Listeners =====
   $customer.addEventListener('change', onChange);
   $type.addEventListener('change', onChange);
   $search.addEventListener('input', onChange);
+
   $from.addEventListener('change', onChange);
   $to.addEventListener('change', onChange);
+
+  // ✅ NEW
+  $shipFrom.addEventListener('change', onChange);
+  $shipTo.addEventListener('change', onChange);
+
   $open.addEventListener('change', onChange);
 
+  // ===== Clear button =====
   $clear.addEventListener('click', () => {
     $customer.value = '__ALL__';
     $type.value = '__ALL__';
     $search.value = '';
+
     $from.value = '';
     $to.value = '';
+
+    // ✅ NEW
+    $shipFrom.value = '';
+    $shipTo.value = '';
+
     $open.checked = false;
     saveShippingFiltersToStorage(getShippingFilterState());
     renderShippingFiltered();
   });
 }
+
 
 function getShippingFilterState() {
   if (!shippingFilterEls) return {};
@@ -343,11 +441,14 @@ function getShippingFilterState() {
     customer: shippingFilterEls.$customer.value,
     type: shippingFilterEls.$type.value,
     search: shippingFilterEls.$search.value,
-    from: shippingFilterEls.$from.value, // yyyy-mm-dd
+    from: shippingFilterEls.$from.value,
     to: shippingFilterEls.$to.value,
+    shipFrom: shippingFilterEls.$shipFrom.value,
+    shipTo: shippingFilterEls.$shipTo.value,
     openOnly: shippingFilterEls.$open.checked
   };
 }
+
 
 function setShippingDropdownOptions($select, values, savedValue) {
   const cur = savedValue || $select.value;
