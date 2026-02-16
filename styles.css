@@ -493,3 +493,10 @@ td.status-complete {
   word-break: normal;            /* stop breaking every character */
   overflow-wrap: normal;         /* override "anywhere" */
 }
+
+.credit-note {
+  font-size: 0.65rem;
+  color: #666;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}

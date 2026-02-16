@@ -96,8 +96,8 @@ const CAPACITY_WORKDAYS_AHEAD = 5;
 const CAPACITY_MAP = {
   LASER:   { shifts: 2, hoursPerShift: 8 },
   EMK:     { shifts: 2, hoursPerShift: 8 },
-  TRU1000: { shifts: 1, hoursPerShift: 8 },
-  VASKI:   { shifts: 1, hoursPerShift: 8 },
+  TRU1000: { shifts: 2, hoursPerShift: 8 },
+  VASKI:   { shifts: 2, hoursPerShift: 8 },
   PROGRAM: { shifts: 1, hoursPerShift: 8 },
 };
 
