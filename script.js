@@ -81,6 +81,189 @@ const viewFeed = document.getElementById('view-feed');
 const viewShipping = document.getElementById('view-shipping');
 const viewCapacity = document.getElementById('view-capacity');
 
+// ===== DOM: capacity =====
+const capacityContent = document.getElementById('capacity-content');
+const capacityCount = document.getElementById('capacity-count');
+
+/* =========================
+   CAPACITY CONFIG
+   ========================= */
+
+// Default planning horizon (workdays)
+const CAPACITY_WORKDAYS_AHEAD = 5;
+
+// Define capacity by module (shifts + hrs per shift)
+const CAPACITY_MAP = {
+  LASER:   { shifts: 2, hoursPerShift: 8 },
+  EMK:     { shifts: 2, hoursPerShift: 8 },
+  TRU1000: { shifts: 1, hoursPerShift: 8 },
+  VASKI:   { shifts: 1, hoursPerShift: 8 },
+  PROGRAM: { shifts: 1, hoursPerShift: 8 },
+};
+
+function safeNum(v) {
+  const raw = String(v ?? '').replace(/,/g, '').trim();
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function startOfDayMs(ms) {
+  const d = new Date(ms);
+  d.setHours(0,0,0,0);
+  return d.getTime();
+}
+
+function isWorkday(dateObj) {
+  const day = dateObj.getDay(); // 0 Sun ... 6 Sat
+  return day !== 0 && day !== 6;
+}
+
+function getNextWorkdayDates(count) {
+  const out = [];
+  const d = new Date();
+  d.setHours(0,0,0,0);
+
+  while (out.length < count) {
+    if (isWorkday(d)) out.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
+function withinNextWorkdays(dueMs, workdayDates) {
+  if (!Number.isFinite(dueMs) || dueMs === Infinity) return false;
+  const dueDay = startOfDayMs(dueMs);
+  const set = new Set(workdayDates.map(dt => dt.getTime()));
+  return set.has(dueDay);
+}
+
+async function loadCapacityOnly() {
+  try {
+    if (!capacityContent) throw new Error('Missing #capacity-content element in HTML.');
+    if (!capacityCount) throw new Error('Missing #capacity-count element in HTML.');
+
+    // Pull schedule data once
+    const table = await fetchGvizTable(SCHEDULE_SHEET_ID, GID_MASTER_SCHEDULE);
+    const cols = table.cols || [];
+    const rowsAll = (table.rows || []).slice();
+    const map = buildColIndexMap(cols);
+
+    // Find required columns (robust)
+    const machineIdx = findColIndex(map, [COL_MACHINE, 'MACHINES']);
+    const dueIdx = findColIndex(map, [COL_DUE_DATE, 'DUE', 'DUE_DT', 'DUE DATE ', 'DUE DATE:']);
+    const estIdx = findColIndex(map, [
+      COL_EST_HOURS,
+      'EST TIME',
+      'EST TIME (HRS)',
+      'EST HOURS',
+      'EST. TIME (HOURS)',
+      'ESTIMATED HOURS',
+      'EST HRS'
+    ]);
+
+    if (machineIdx === undefined) throw new Error(`Could not find "${COL_MACHINE}" in Master Schedule.`);
+    if (estIdx === undefined) throw new Error(`Could not find "${COL_EST_HOURS}" in Master Schedule.`);
+    if (dueIdx === undefined) throw new Error(`Could not find "${COL_DUE_DATE}" in Master Schedule.`);
+
+    // Workday window (next N workdays)
+    const workdayDates = getNextWorkdayDates(CAPACITY_WORKDAYS_AHEAD);
+
+    // Aggregate scheduled hours per module (LASER/EMK/etc)
+    const results = {};
+    Object.keys(SCHEDULE_FILTERS).forEach(k => {
+      results[k] = { scheduledHrs: 0, dueSoonHrs: 0, totalJobs: 0 };
+    });
+
+    rowsAll.forEach(r => {
+      const machineVal = normalize(cellVal(r.c[machineIdx]));
+      const dueMs = parseAnyDateMs(cellVal(r.c[dueIdx]));
+      const hrs = safeNum(cellVal(r.c[estIdx]));
+
+      if (!Number.isFinite(hrs) || hrs <= 0) return;
+
+      // Assign row to the first matching module key
+      for (const key of Object.keys(SCHEDULE_FILTERS)) {
+        const wanted = (SCHEDULE_FILTERS[key] || []).map(normalize);
+        if (wanted.includes(machineVal)) {
+          results[key].scheduledHrs += hrs;
+          results[key].totalJobs += 1;
+
+          if (withinNextWorkdays(dueMs, workdayDates)) {
+            results[key].dueSoonHrs += hrs;
+          }
+          break;
+        }
+      }
+    });
+
+    // Render cards
+    let html = `<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">`;
+
+    const keysInOrder = ['LASER','EMK','TRU1000','VASKI','PROGRAM'];
+
+    keysInOrder.forEach(key => {
+      const cap = CAPACITY_MAP[key] || { shifts: 1, hoursPerShift: 8 };
+      const capHrs = cap.shifts * cap.hoursPerShift * CAPACITY_WORKDAYS_AHEAD;
+
+      const sched = results[key]?.scheduledHrs || 0;
+      const dueSoon = results[key]?.dueSoonHrs || 0;
+      const jobs = results[key]?.totalJobs || 0;
+
+      const util = capHrs > 0 ? (sched / capHrs) : 0;
+      const utilPct = Math.round(util * 100);
+      const remaining = capHrs - sched;
+
+      const over = sched > capHrs;
+
+      // progress bar
+      const barPct = Math.max(0, Math.min(100, util * 100));
+
+      html += `
+        <div style="border:1px solid #2d2d2d; background:#111; border-radius:12px; padding:12px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div style="font-weight:900; font-size:1.05rem;">${key}</div>
+            <div style="font-weight:900; padding:4px 8px; border-radius:999px; background:${over ? '#3b0f0f' : '#0f2c14'}; color:${over ? '#ffb3b3' : '#b9ffd0'};">
+              ${over ? 'OVER' : 'OK'}
+            </div>
+          </div>
+
+          <div style="margin-top:8px; color:#bbb; font-weight:800;">
+            ${sched.toFixed(1)} / ${capHrs.toFixed(1)} hrs • ${cap.shifts} shift(s)
+          </div>
+
+          <div style="margin-top:8px; height:10px; background:#1f1f1f; border-radius:999px; overflow:hidden;">
+            <div style="height:10px; width:${barPct}%; background:#7aa6ff;"></div>
+          </div>
+
+          <div style="margin-top:8px; display:flex; justify-content:space-between; color:#ddd;">
+            <div><b>${utilPct}%</b> utilized</div>
+            <div>${remaining >= 0 ? `<b>${remaining.toFixed(1)}</b> hrs left` : `<b>${Math.abs(remaining).toFixed(1)}</b> hrs over`}</div>
+          </div>
+
+          <div style="margin-top:10px; color:#bbb;">
+            Due in next <b>${CAPACITY_WORKDAYS_AHEAD}</b> workdays: <b>${dueSoon.toFixed(1)}</b> hrs
+          </div>
+
+          <div style="margin-top:6px; color:#bbb;">
+            Jobs counted: <b>${jobs}</b>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+
+    capacityContent.innerHTML = html;
+    capacityCount.textContent = `Next ${CAPACITY_WORKDAYS_AHEAD} workdays • scheduled EST hours vs capacity`;
+
+  } catch (err) {
+    console.error(err);
+    if (capacityContent) capacityContent.innerHTML = `⚠️ ${err.message}`;
+    if (capacityCount) capacityCount.textContent = '—';
+  }
+}
+
+
 const viewSchedules = document.getElementById('view-schedules');
 const viewCalculators = document.getElementById('view-calculators');
 
@@ -746,11 +929,15 @@ function setView(view) {
     shippingContainer.scrollTop = 0;
     loadShippingOnly();
   }
+  if (view === 'capacity') {
+    loadCapacityOnly();
+  }
   if (view === 'scheduleModule') {
     scheduleContainer.scrollTop = 0;
     loadScheduleModule();
   }
 }
+
 
 /* =========================
    Buttons: home + back
@@ -1627,6 +1814,7 @@ function refreshActive() {
   if (currentView === 'action') loadActionOnly();
   if (currentView === 'feed') loadFeedOnly();
   if (currentView === 'shipping') loadShippingOnly();     // ✅ NEW: auto refresh shipping
+  if (currentView === 'capacity') loadCapacityOnly();
   if (currentView === 'scheduleModule') loadScheduleModule();
 }
 
