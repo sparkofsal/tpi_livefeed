@@ -751,15 +751,25 @@ function renderShippingFiltered() {
   filtered.forEach(r => {
     const tr = document.createElement('tr');
 
-    SHIPPING_VISIBLE_COLS.forEach(i => {
-      const td = document.createElement('td');
-      const v = cellVal(r.c[i]);
+      SHIPPING_VISIBLE_COLS.forEach(i => {
+    const td = document.createElement('td');
 
-      if (i === idxOrderDate || i === idxDueDate) td.textContent = formatDateOnly(v);
-      else td.textContent = v;
+    // ✅ Order/Due still date-only
+    if (i === idxOrderDate || i === idxDueDate) {
+      td.textContent = formatDateOnly(cellVal(r.c[i]));
 
-      tr.appendChild(td);
-    });
+    // ✅ SHIP DATE: show date if it’s a real date, otherwise show text notes
+    } else if (idxShip !== undefined && i === idxShip) {
+      td.textContent = formatShipDisplay(r.c[i]);
+
+    // ✅ Everything else: use .f when available, else .v
+    } else {
+      td.textContent = cellDisplay(r.c[i]);
+    }
+
+    tr.appendChild(td);
+  });
+
 
     shippingBody.appendChild(tr);
   });
